@@ -19,10 +19,7 @@ namespace SmartQueue.Api.Controllers
             this.queueService = queueService;
         }
 
-        public QueuesController(IQueueService queueService)
-        {
-            this.queueService = queueService;
-        }
+       
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<QueueResponseDto>>> GetAll()

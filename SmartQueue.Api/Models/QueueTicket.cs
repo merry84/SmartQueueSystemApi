@@ -1,4 +1,6 @@
-﻿namespace SmartQueue.Api.Models
+﻿using SmartQueue.Api.Enums;
+namespace SmartQueue.Api.Models
+
 {
     public class QueueTicket
     {
@@ -8,9 +10,8 @@
 
         public int Number { get; set; }
 
-        public string Status { get; set; } = "Waiting";
-
-        public string Priority { get; set; } = "Normal";
+        public QueueStatus Status { get; set; }
+        public QueuePriority Priority { get; set; }
 
         public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
 

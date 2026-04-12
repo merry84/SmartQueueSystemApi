@@ -3,6 +3,7 @@ using SmartQueue.Api.Data;
 using SmartQueue.Api.DTOs;
 using SmartQueue.Api.Models;
 using SmartQueue.Api.Services.Contracts;
+using SmartQueue.Api.Enums;
 
 namespace SmartQueue.Api.Services
 {
@@ -77,12 +78,16 @@ namespace SmartQueue.Api.Services
 
             var nextNumber = lastNumber + 1;
 
+            var priority = model.Priority?.ToUpper() == "VIP"
+                ? QueuePriority.VIP
+                : QueuePriority.Normal;
+
             var ticket = new QueueTicket
             {
                 CustomerName = model.CustomerName,
                 Number = nextNumber,
-                Status = "Waiting",
-                Priority = string.IsNullOrWhiteSpace(model.Priority) ? "Normal" : model.Priority,
+                Status = QueueStatus.Waiting,
+                Priority = priority,
                 QueueId = id,
                 CreatedOn = DateTime.UtcNow
             };
@@ -95,8 +100,8 @@ namespace SmartQueue.Api.Services
                 Id = ticket.Id,
                 CustomerName = ticket.CustomerName,
                 Number = ticket.Number,
-                Status = ticket.Status,
-                Priority = ticket.Priority,
+                Status = ticket.Status.ToString(),
+                Priority = ticket.Priority.ToString(),
                 CreatedOn = ticket.CreatedOn
             };
         }
@@ -111,8 +116,8 @@ namespace SmartQueue.Api.Services
                     Id = t.Id,
                     CustomerName = t.CustomerName,
                     Number = t.Number,
-                    Status = t.Status,
-                    Priority = t.Priority,
+                    Status = t.Status.ToString(),
+                    Priority = t.Priority.ToString(),
                     CreatedOn = t.CreatedOn,
                     CalledOn = t.CalledOn
                 })
@@ -122,8 +127,8 @@ namespace SmartQueue.Api.Services
         public async Task<NextTicketResponseDto?> CallNextAsync(int id)
         {
             var nextTicket = await dbContext.QueueTickets
-                .Where(t => t.QueueId == id && t.Status == "Waiting")
-                .OrderBy(t => t.Priority == "VIP" ? 0 : 1)
+                .Where(t => t.QueueId == id && t.Status == QueueStatus.Waiting)
+                .OrderBy(t => t.Priority == QueuePriority.VIP ? 0 : 1)
                 .ThenBy(t => t.Number)
                 .FirstOrDefaultAsync();
 
@@ -132,7 +137,7 @@ namespace SmartQueue.Api.Services
                 return null;
             }
 
-            nextTicket.Status = "Called";
+            nextTicket.Status = QueueStatus.Called;
             nextTicket.CalledOn = DateTime.UtcNow;
 
             await dbContext.SaveChangesAsync();
@@ -142,8 +147,8 @@ namespace SmartQueue.Api.Services
                 Id = nextTicket.Id,
                 CustomerName = nextTicket.CustomerName,
                 Number = nextTicket.Number,
-                Status = nextTicket.Status,
-                Priority = nextTicket.Priority,
+                Status = nextTicket.Status.ToString(),
+                Priority = nextTicket.Priority.ToString(),
                 CreatedOn = nextTicket.CreatedOn,
                 CalledOn = nextTicket.CalledOn
             };

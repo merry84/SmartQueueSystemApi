@@ -29,15 +29,7 @@ namespace SmartQueue.Api.Data
                 .HasMaxLength(100)
                 .IsRequired();
 
-            builder.Entity<QueueTicket>()
-                .Property(t => t.Status)
-                .HasMaxLength(20)
-                .IsRequired();
-
-            builder.Entity<QueueTicket>()
-                .Property(t => t.Priority)
-                .HasMaxLength(20)
-                .IsRequired();
+       
 
             builder.Entity<QueueTicket>()
                 .HasOne(t => t.Queue)

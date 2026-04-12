@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartQueue.Api.Data;
 using SmartQueue.Api.DTOs;
-using Microsoft.AspNetCore.Authorization;
+using SmartQueue.Api.Enums;
+
 namespace SmartQueue.Api.Controllers
 {
     [ApiController]
@@ -28,12 +30,12 @@ namespace SmartQueue.Api.Controllers
                 return NotFound("Ticket not found");
             }
 
-            if (ticket.Status != "Called")
+            if (ticket.Status != QueueStatus.Called)
             {
                 return BadRequest("Only called tickets can be marked as served");
             }
 
-            ticket.Status = "Served";
+            ticket.Status = QueueStatus.Served;
 
             await dbContext.SaveChangesAsync();
 
@@ -42,8 +44,8 @@ namespace SmartQueue.Api.Controllers
                 Id = ticket.Id,
                 CustomerName = ticket.CustomerName,
                 Number = ticket.Number,
-                Status = ticket.Status,
-                Priority = ticket.Priority,
+                Status = ticket.Status.ToString(),
+                Priority = ticket.Priority.ToString(),
                 CreatedOn = ticket.CreatedOn,
                 CalledOn = ticket.CalledOn
             };
