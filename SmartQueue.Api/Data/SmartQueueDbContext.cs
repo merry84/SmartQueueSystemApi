@@ -1,9 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SmartQueue.Api.Models;
 
 namespace SmartQueue.Api.Data
 {
-    public class SmartQueueDbContext : DbContext
+    public class SmartQueueDbContext : IdentityDbContext<ApplicationUser>
     {
         public SmartQueueDbContext(DbContextOptions<SmartQueueDbContext> options)
             : base(options)

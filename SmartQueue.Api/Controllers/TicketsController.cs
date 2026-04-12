@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SmartQueue.Api.Data;
 using SmartQueue.Api.DTOs;
-
+using Microsoft.AspNetCore.Authorization;
 namespace SmartQueue.Api.Controllers
 {
     [ApiController]
@@ -16,6 +16,7 @@ namespace SmartQueue.Api.Controllers
             this.dbContext = dbContext;
         }
 
+        [Authorize(Roles = "Operator")]
         [HttpPost("{id}/serve")]
         public async Task<ActionResult<NextTicketResponseDto>> ServeTicket(int id)
         {
