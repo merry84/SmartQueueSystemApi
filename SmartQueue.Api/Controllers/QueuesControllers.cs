@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SmartQueue.Api.Common;
 using SmartQueue.Api.Data;
 using SmartQueue.Api.DTOs;
 using SmartQueue.Api.Models;
@@ -25,7 +26,8 @@ namespace SmartQueue.Api.Controllers
         public async Task<ActionResult<IEnumerable<QueueResponseDto>>> GetAll()
         {
             var result = await queueService.GetAllAsync();
-            return Ok(result);
+            return Ok(ApiResponse<IEnumerable<QueueResponseDto>>
+                    .SuccessResponse(result, "Queues retrieved successfully"));
         }
 
         [HttpGet("{id}")]
@@ -49,7 +51,8 @@ namespace SmartQueue.Api.Controllers
         public async Task<ActionResult<QueueResponseDto>> Create(CreateQueueRequestDto model)
         {
             var result = await queueService.CreateAsync(model);
-            return Ok(result);
+            return Ok(ApiResponse<QueueResponseDto>
+                     .SuccessResponse(result, "Queue created successfully"));
         }
 
         [AllowAnonymous]
@@ -57,7 +60,8 @@ namespace SmartQueue.Api.Controllers
         public async Task<ActionResult<QueueTicketResponseDto>> JoinQueue(int id, JoinQueueRequestDto model)
         {
             var result = await queueService.JoinQueueAsync(id, model);
-            return Ok(result);
+            return Ok(ApiResponse<QueueTicketResponseDto>
+                     .SuccessResponse(result, "Ticket created successfully"));
         }
 
         [Authorize(Roles = "Operator")]
@@ -71,7 +75,8 @@ namespace SmartQueue.Api.Controllers
                 return NotFound();
             }
 
-            return Ok(result);
+            return Ok(ApiResponse<NextTicketResponseDto>
+                    .SuccessResponse(result, "Next ticket called"));
         }
 
         [HttpGet("{id}/tickets")]

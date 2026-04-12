@@ -8,6 +8,7 @@ using SmartQueue.Api.Data.Seed;
 using SmartQueue.Api.Models;
 using SmartQueue.Api.Services;
 using SmartQueue.Api.Services.Contracts;
+using SmartQueue.Api.Extensions;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -98,6 +99,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseGlobalExceptionMiddleware();
 
 app.UseAuthentication();
 app.UseAuthorization();

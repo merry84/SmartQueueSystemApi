@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SmartQueue.Api.Common;
 using SmartQueue.Api.Data;
 using SmartQueue.Api.DTOs;
 using SmartQueue.Api.Enums;
@@ -50,7 +51,8 @@ namespace SmartQueue.Api.Controllers
                 CalledOn = ticket.CalledOn
             };
 
-            return Ok(response);
+            return Ok(ApiResponse<NextTicketResponseDto>
+                    .SuccessResponse(response, "Ticket served successfully"));
         }
     }
 }
