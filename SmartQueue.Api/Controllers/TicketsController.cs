@@ -31,11 +31,7 @@ namespace SmartQueue.Api.Controllers
                 return NotFound("Ticket not found");
             }
 
-            if (ticket.Status != QueueStatus.Called)
-            {
-                return BadRequest("Only called tickets can be marked as served");
-            }
-
+          
             ticket.Status = QueueStatus.Served;
 
             await dbContext.SaveChangesAsync();

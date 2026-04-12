@@ -155,12 +155,7 @@ namespace SmartQueue.Api.Controllers
         [HttpPost("assign-role")]
         public async Task<ActionResult<AuthResponseDto>> AssignRole(AssignRoleRequestDto model)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var user = await userManager.FindByEmailAsync(model.Email);
+           var user = await userManager.FindByEmailAsync(model.Email);
 
             if (user == null)
             {

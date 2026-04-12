@@ -1,14 +1,15 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SmartQueue.Api.Data;
 using SmartQueue.Api.Data.Seed;
+using SmartQueue.Api.Extensions;
 using SmartQueue.Api.Models;
 using SmartQueue.Api.Services;
 using SmartQueue.Api.Services.Contracts;
-using SmartQueue.Api.Extensions;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -57,6 +58,26 @@ builder.Services.AddDbContext<SmartQueueDbContext>(options =>
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<SmartQueueDbContext>()
     .AddDefaultTokenProviders();
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(x => x.Value?.Errors.Count > 0)
+            .SelectMany(x => x.Value!.Errors)
+            .Select(x => x.ErrorMessage)
+            .ToList();
+
+        var response = new
+        {
+            success = false,
+            message = "Validation failed",
+            errors = errors
+        };
+
+        return new BadRequestObjectResult(response);
+    };
+});
 
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("JWT Key is missing.");
