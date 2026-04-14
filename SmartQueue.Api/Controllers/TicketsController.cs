@@ -31,8 +31,8 @@ namespace SmartQueue.Api.Controllers
                 return NotFound("Ticket not found");
             }
 
-          
             ticket.Status = QueueStatus.Served;
+            ticket.ServedOn = DateTime.UtcNow;
 
             await dbContext.SaveChangesAsync();
 
@@ -48,7 +48,7 @@ namespace SmartQueue.Api.Controllers
             };
 
             return Ok(ApiResponse<NextTicketResponseDto>
-                    .SuccessResponse(response, "Ticket served successfully"));
+                .SuccessResponse(response, "Ticket served successfully"));
         }
     }
 }

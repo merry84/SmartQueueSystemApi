@@ -25,6 +25,7 @@ namespace SmartQueue.Api.Services
                     Name = q.Name,
                     Description = q.Description,
                     IsActive = q.IsActive,
+                    AverageServiceTimeMinutes = q.AverageServiceTimeMinutes,
                     CreatedOn = q.CreatedOn
                 })
                 .ToListAsync();
@@ -40,6 +41,7 @@ namespace SmartQueue.Api.Services
                     Name = q.Name,
                     Description = q.Description,
                     IsActive = q.IsActive,
+                    AverageServiceTimeMinutes = q.AverageServiceTimeMinutes,
                     CreatedOn = q.CreatedOn
                 })
                 .FirstOrDefaultAsync();
@@ -52,6 +54,7 @@ namespace SmartQueue.Api.Services
                 Name = model.Name,
                 Description = model.Description,
                 IsActive = true,
+                AverageServiceTimeMinutes = model.AverageServiceTimeMinutes,
                 CreatedOn = DateTime.UtcNow
             };
 
@@ -64,12 +67,21 @@ namespace SmartQueue.Api.Services
                 Name = queue.Name,
                 Description = queue.Description,
                 IsActive = queue.IsActive,
+                AverageServiceTimeMinutes = queue.AverageServiceTimeMinutes,
                 CreatedOn = queue.CreatedOn
             };
         }
 
         public async Task<QueueTicketResponseDto> JoinQueueAsync(int id, JoinQueueRequestDto model)
         {
+            var queue = await dbContext.Queues
+                .FirstOrDefaultAsync(q => q.Id == id && q.IsActive);
+
+            if (queue == null)
+            {
+                throw new ArgumentException("Queue not found or inactive.");
+            }
+
             var lastNumber = await dbContext.QueueTickets
                 .Where(t => t.QueueId == id)
                 .OrderByDescending(t => t.Number)
@@ -82,6 +94,24 @@ namespace SmartQueue.Api.Services
                 ? QueuePriority.VIP
                 : QueuePriority.Normal;
 
+            int peopleAhead;
+
+            if (priority == QueuePriority.VIP)
+            {
+                peopleAhead = await dbContext.QueueTickets
+                    .CountAsync(t => t.QueueId == id
+                        && t.Status == QueueStatus.Waiting
+                        && t.Priority == QueuePriority.VIP);
+            }
+            else
+            {
+                peopleAhead = await dbContext.QueueTickets
+                    .CountAsync(t => t.QueueId == id
+                        && t.Status == QueueStatus.Waiting);
+            }
+
+            var estimatedWait = peopleAhead * queue.AverageServiceTimeMinutes;
+
             var ticket = new QueueTicket
             {
                 CustomerName = model.CustomerName,
@@ -89,7 +119,8 @@ namespace SmartQueue.Api.Services
                 Status = QueueStatus.Waiting,
                 Priority = priority,
                 QueueId = id,
-                CreatedOn = DateTime.UtcNow
+                CreatedOn = DateTime.UtcNow,
+                EstimatedWaitTimeMinutes = estimatedWait
             };
 
             await dbContext.QueueTickets.AddAsync(ticket);
@@ -102,7 +133,8 @@ namespace SmartQueue.Api.Services
                 Number = ticket.Number,
                 Status = ticket.Status.ToString(),
                 Priority = ticket.Priority.ToString(),
-                CreatedOn = ticket.CreatedOn
+                CreatedOn = ticket.CreatedOn,
+                EstimatedWaitTimeMinutes = ticket.EstimatedWaitTimeMinutes
             };
         }
 
@@ -110,7 +142,8 @@ namespace SmartQueue.Api.Services
         {
             return await dbContext.QueueTickets
                 .Where(t => t.QueueId == id)
-                .OrderBy(t => t.Number)
+                .OrderBy(t => t.Priority == QueuePriority.VIP ? 0 : 1)
+                .ThenBy(t => t.Number)
                 .Select(t => new QueueTicketListItemDto
                 {
                     Id = t.Id,
@@ -118,6 +151,7 @@ namespace SmartQueue.Api.Services
                     Number = t.Number,
                     Status = t.Status.ToString(),
                     Priority = t.Priority.ToString(),
+                    EstimatedWaitTimeMinutes = t.EstimatedWaitTimeMinutes,
                     CreatedOn = t.CreatedOn,
                     CalledOn = t.CalledOn
                 })
@@ -142,6 +176,8 @@ namespace SmartQueue.Api.Services
 
             await dbContext.SaveChangesAsync();
 
+            await RecalculateEstimatedWaitTimesAsync(id);
+
             return new NextTicketResponseDto
             {
                 Id = nextTicket.Id,
@@ -151,6 +187,64 @@ namespace SmartQueue.Api.Services
                 Priority = nextTicket.Priority.ToString(),
                 CreatedOn = nextTicket.CreatedOn,
                 CalledOn = nextTicket.CalledOn
+            };
+        }
+        private async Task RecalculateEstimatedWaitTimesAsync(int queueId)
+        {
+            var queue = await dbContext.Queues.FirstOrDefaultAsync(q => q.Id == queueId);
+
+            if (queue == null)
+            {
+                return;
+            }
+
+            var waitingTickets = await dbContext.QueueTickets
+                .Where(t => t.QueueId == queueId && t.Status == QueueStatus.Waiting)
+                .OrderBy(t => t.Priority == QueuePriority.VIP ? 0 : 1)
+                .ThenBy(t => t.Number)
+                .ToListAsync();
+
+            for (int i = 0; i < waitingTickets.Count; i++)
+            {
+                waitingTickets[i].EstimatedWaitTimeMinutes = i * queue.AverageServiceTimeMinutes;
+            }
+
+            await dbContext.SaveChangesAsync();
+        }
+        public async Task<QueueStatisticsDto> GetStatisticsAsync()
+        {
+            var totalTickets = await dbContext.QueueTickets.CountAsync();
+
+            var waitingTickets = await dbContext.QueueTickets
+                .CountAsync(t => t.Status == QueueStatus.Waiting);
+
+            var calledTickets = await dbContext.QueueTickets
+                .CountAsync(t => t.Status == QueueStatus.Called);
+
+            var servedTickets = await dbContext.QueueTickets
+                .CountAsync(t => t.Status == QueueStatus.Served);
+
+            var averageWaitTimeMinutes = await dbContext.QueueTickets
+                .Where(t => t.Status == QueueStatus.Served && t.ServedOn.HasValue)
+                .Select(t => EF.Functions.DateDiffMinute(t.CreatedOn, t.ServedOn!.Value))
+                .DefaultIfEmpty(0)
+                .AverageAsync();
+
+            var mostRequestedQueueName = await dbContext.QueueTickets
+                .Include(t => t.Queue)
+                .GroupBy(t => t.Queue.Name)
+                .OrderByDescending(g => g.Count())
+                .Select(g => g.Key)
+                .FirstOrDefaultAsync();
+
+            return new QueueStatisticsDto
+            {
+                TotalTickets = totalTickets,
+                WaitingTickets = waitingTickets,
+                CalledTickets = calledTickets,
+                ServedTickets = servedTickets,
+                AverageWaitTimeMinutes = averageWaitTimeMinutes,
+                MostRequestedQueueName = mostRequestedQueueName
             };
         }
     }

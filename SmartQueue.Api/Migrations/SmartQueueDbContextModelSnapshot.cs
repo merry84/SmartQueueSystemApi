@@ -228,6 +228,9 @@ namespace SmartQueue.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("AverageServiceTimeMinutes")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime2");
 
@@ -266,6 +269,9 @@ namespace SmartQueue.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("EstimatedWaitTimeMinutes")
+                        .HasColumnType("int");
+
                     b.Property<int>("Number")
                         .HasColumnType("int");
 
@@ -274,6 +280,9 @@ namespace SmartQueue.Api.Migrations
 
                     b.Property<int>("QueueId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ServedOn")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");

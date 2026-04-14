@@ -13,5 +13,6 @@
         public string Priority { get; set; } = null!;
 
         public DateTime CreatedOn { get; set; }
+        public int EstimatedWaitTimeMinutes { get; set; }
     }
 }

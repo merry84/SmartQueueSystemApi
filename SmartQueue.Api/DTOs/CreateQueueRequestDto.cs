@@ -10,5 +10,8 @@ namespace SmartQueue.Api.DTOs
 
         [StringLength(250)]
         public string? Description { get; set; }
+
+        [Range(1, 120)]
+        public int AverageServiceTimeMinutes { get; set; } = 5;
     }
 }

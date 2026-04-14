@@ -10,6 +10,8 @@
 
         public bool IsActive { get; set; }
 
+        public int AverageServiceTimeMinutes { get; set; }
+
         public DateTime CreatedOn { get; set; }
     }
 }

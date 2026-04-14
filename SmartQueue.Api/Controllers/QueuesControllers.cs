@@ -1,10 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using SmartQueue.Api.Common;
-using SmartQueue.Api.Data;
 using SmartQueue.Api.DTOs;
-using SmartQueue.Api.Models;
 using SmartQueue.Api.Services.Contracts;
 namespace SmartQueue.Api.Controllers
 {
@@ -44,8 +41,7 @@ namespace SmartQueue.Api.Controllers
             return Ok(queue);
         }
 
-        [Authorize(Roles = "Admin")]
-        [HttpPost]
+       
         [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<QueueResponseDto>> Create(CreateQueueRequestDto model)
@@ -84,6 +80,15 @@ namespace SmartQueue.Api.Controllers
         {
             var result = await queueService.GetTicketsAsync(id);
             return Ok(result);
+        }
+
+        [HttpGet("statistics")]
+        public async Task<ActionResult<QueueStatisticsDto>> GetStatistics()
+        {
+            var result = await queueService.GetStatisticsAsync();
+
+            return Ok(ApiResponse<QueueStatisticsDto>
+                .SuccessResponse(result, "Statistics retrieved successfully"));
         }
     }
 }

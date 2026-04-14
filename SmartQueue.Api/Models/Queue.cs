@@ -9,6 +9,7 @@
         public string? Description { get; set; }
 
         public bool IsActive { get; set; } = true;
+        public int AverageServiceTimeMinutes { get; set; } = 5;
 
         public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
 
