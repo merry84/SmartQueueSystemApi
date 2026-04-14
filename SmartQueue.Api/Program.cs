@@ -52,12 +52,16 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("DefaultConnection is missing.");
+
 builder.Services.AddDbContext<SmartQueueDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(connectionString));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<SmartQueueDbContext>()
     .AddDefaultTokenProviders();
+
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
@@ -113,13 +117,16 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-app.UseHttpsRedirection();
+if (!app.Environment.IsEnvironment("Docker"))
+{
+    app.UseHttpsRedirection();
+}
+;
 app.UseGlobalExceptionMiddleware();
 
 app.UseAuthentication();
@@ -129,7 +136,27 @@ app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
 {
+    var dbContext = scope.ServiceProvider.GetRequiredService<SmartQueueDbContext>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    await RoleSeeder.SeedRolesAsync(roleManager);
+
+    var retries = 5;
+
+    while (retries > 0)
+    {
+        try
+        {
+            dbContext.Database.Migrate();
+            await RoleSeeder.SeedRolesAsync(roleManager);
+            break;
+        }
+        catch
+        {
+            retries--;
+            Console.WriteLine("Waiting for database...");
+            await Task.Delay(5000);
+        }
+    }
 }
+
+
 app.Run();
