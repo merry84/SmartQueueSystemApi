@@ -2,16 +2,10 @@
 {
     public class QueueStatisticsDto
     {
-        public int TotalTickets { get; set; }
+        public QueueOverviewStatsDto Overview { get; set; } = new();
 
-        public int WaitingTickets { get; set; }
+        public TodayQueueStatsDto Today { get; set; } = new();
 
-        public int CalledTickets { get; set; }
-
-        public int ServedTickets { get; set; }
-
-        public double AverageWaitTimeMinutes { get; set; }
-
-        public string? MostRequestedQueueName { get; set; }
+        public IEnumerable<TopQueueStatsDto> TopQueues { get; set; } = new List<TopQueueStatsDto>();
     }
 }

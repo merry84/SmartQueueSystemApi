@@ -90,5 +90,15 @@ namespace SmartQueue.Api.Controllers
             return Ok(ApiResponse<QueueStatisticsDto>
                 .SuccessResponse(result, "Statistics retrieved successfully"));
         }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("admin-summary")]
+        public async Task<ActionResult<AdminSummaryDto>> GetAdminSummary()
+        {
+            var result = await queueService.GetAdminSummaryAsync();
+
+            return Ok(ApiResponse<AdminSummaryDto>
+                .SuccessResponse(result, "Admin summary retrieved successfully"));
+        }
     }
 }

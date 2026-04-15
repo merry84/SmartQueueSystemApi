@@ -213,6 +213,8 @@ namespace SmartQueue.Api.Services
         }
         public async Task<QueueStatisticsDto> GetStatisticsAsync()
         {
+            var today = DateTime.UtcNow.Date;
+
             var totalTickets = await dbContext.QueueTickets.CountAsync();
 
             var waitingTickets = await dbContext.QueueTickets
@@ -237,14 +239,108 @@ namespace SmartQueue.Api.Services
                 .Select(g => g.Key)
                 .FirstOrDefaultAsync();
 
+            var ticketsCreatedToday = await dbContext.QueueTickets
+                .CountAsync(t => t.CreatedOn >= today);
+
+            var ticketsCalledToday = await dbContext.QueueTickets
+                .CountAsync(t => t.CalledOn.HasValue && t.CalledOn.Value >= today);
+
+            var ticketsServedToday = await dbContext.QueueTickets
+                .CountAsync(t => t.ServedOn.HasValue && t.ServedOn.Value >= today);
+
+            var topQueues = await dbContext.Queues
+                .Select(q => new TopQueueStatsDto
+                {
+                    QueueId = q.Id,
+                    QueueName = q.Name,
+                    TotalTickets = q.Tickets.Count(),
+                    WaitingTickets = q.Tickets.Count(t => t.Status == QueueStatus.Waiting),
+                    ServedTickets = q.Tickets.Count(t => t.Status == QueueStatus.Served),
+                    AverageServiceTimeMinutes = q.AverageServiceTimeMinutes
+                })
+                .OrderByDescending(q => q.TotalTickets)
+                .ThenBy(q => q.QueueName)
+                .Take(5)
+                .ToListAsync();
+
             return new QueueStatisticsDto
             {
+                Overview = new QueueOverviewStatsDto
+                {
+                    TotalTickets = totalTickets,
+                    WaitingTickets = waitingTickets,
+                    CalledTickets = calledTickets,
+                    ServedTickets = servedTickets,
+                    AverageWaitTimeMinutes = averageWaitTimeMinutes,
+                    MostRequestedQueueName = mostRequestedQueueName
+                },
+                Today = new TodayQueueStatsDto
+                {
+                    TicketsCreatedToday = ticketsCreatedToday,
+                    TicketsCalledToday = ticketsCalledToday,
+                    TicketsServedToday = ticketsServedToday
+                },
+                TopQueues = topQueues
+            };
+        }
+        public async Task<AdminSummaryDto> GetAdminSummaryAsync()
+        {
+            var totalQueues = await dbContext.Queues.CountAsync();
+
+            var activeQueues = await dbContext.Queues
+                .CountAsync(q => q.IsActive);
+
+            var totalTickets = await dbContext.QueueTickets.CountAsync();
+
+            var waitingTickets = await dbContext.QueueTickets
+                .CountAsync(t => t.Status == QueueStatus.Waiting);
+
+            var averageWaitTimeMinutes = await dbContext.QueueTickets
+                .Where(t => t.Status == QueueStatus.Served && t.ServedOn.HasValue)
+                .Select(t => EF.Functions.DateDiffMinute(t.CreatedOn, t.ServedOn!.Value))
+                .DefaultIfEmpty(0)
+                .AverageAsync();
+
+            var queueLoads = await dbContext.Queues
+                .Select(q => new QueueLoadDto
+                {
+                    QueueId = q.Id,
+                    QueueName = q.Name,
+                    WaitingTickets = q.Tickets.Count(t => t.Status == QueueStatus.Waiting),
+                    CalledTickets = q.Tickets.Count(t => t.Status == QueueStatus.Called),
+                    ServedTickets = q.Tickets.Count(t => t.Status == QueueStatus.Served),
+                    IsActive = q.IsActive
+                })
+                .OrderByDescending(q => q.WaitingTickets)
+                .ThenBy(q => q.QueueName)
+                .ToListAsync();
+
+            var recentTickets = await dbContext.QueueTickets
+                .Include(t => t.Queue)
+                .OrderByDescending(t => t.CreatedOn)
+                .Take(10)
+                .Select(t => new RecentTicketDto
+                {
+                    TicketId = t.Id,
+                    CustomerName = t.CustomerName,
+                    Number = t.Number,
+                    QueueName = t.Queue.Name,
+                    Status = t.Status.ToString(),
+                    Priority = t.Priority.ToString(),
+                    CreatedOn = t.CreatedOn,
+                    EstimatedWaitTimeMinutes = t.EstimatedWaitTimeMinutes
+                })
+                .ToListAsync();
+
+            return new AdminSummaryDto
+            {
+                TotalQueues = totalQueues,
+                ActiveQueues = activeQueues,
                 TotalTickets = totalTickets,
                 WaitingTickets = waitingTickets,
-                CalledTickets = calledTickets,
-                ServedTickets = servedTickets,
                 AverageWaitTimeMinutes = averageWaitTimeMinutes,
-                MostRequestedQueueName = mostRequestedQueueName
+                QueueLoads = queueLoads,
+                RecentTickets = recentTickets
             };
         }
     }

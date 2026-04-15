@@ -16,5 +16,6 @@ namespace SmartQueue.Api.Services.Contracts
 
         Task<NextTicketResponseDto?> CallNextAsync(int id);
         Task<QueueStatisticsDto> GetStatisticsAsync();
+        Task<AdminSummaryDto> GetAdminSummaryAsync();
     }
 }
