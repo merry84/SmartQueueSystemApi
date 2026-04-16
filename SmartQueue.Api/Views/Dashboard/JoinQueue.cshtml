@@ -1,0 +1,50 @@
+﻿@model SmartQueue.Api.ViewModels.Dashboard.Forms.JoinQueueFormViewModel
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Join Queue";
+}
+
+<div class="panel-card">
+    <div class="panel-header">
+        <div>
+            <h4 class="panel-title">Join Queue</h4>
+            <p class="panel-subtitle">Create a new customer ticket</p>
+        </div>
+    </div>
+    <div class="panel-body">
+        <form asp-action="JoinQueue" method="post">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="CustomerName" class="form-label"></label>
+                <input asp-for="CustomerName" class="form-control" />
+                <span asp-validation-for="CustomerName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="QueueId" class="form-label"></label>
+                <select asp-for="QueueId" asp-items="Model.Queues" class="form-select">
+                    <option value="">Select queue</option>
+                </select>
+                <span asp-validation-for="QueueId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Priority" class="form-label"></label>
+                <select asp-for="Priority" class="form-select">
+                    <option value="Normal">Normal</option>
+                    <option value="VIP">VIP</option>
+                </select>
+                <span asp-validation-for="Priority" class="text-danger"></span>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-dark rounded-pill px-4">Create Ticket</button>
+                <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">Back</a>
+            </div>
+        </form>
+    </div>
+</div>

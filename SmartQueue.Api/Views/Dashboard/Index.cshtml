@@ -14,6 +14,52 @@
         </p>
     </div>
 </div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="panel-card mb-4">
+    <div class="panel-header">
+        <div>
+            <h4 class="panel-title">Quick Actions</h4>
+            <p class="panel-subtitle">Manage queues and tickets directly from the dashboard</p>
+        </div>
+    </div>
+    <div class="panel-body">
+        <div class="row g-3">
+            <div class="col-md-6 col-xl-3">
+                <a href="/Dashboard/CreateQueue" class="action-card action-blue">
+                    <div class="action-title">Create Queue</div>
+                    <div class="action-text">Add a new queue with service time.</div>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <a href="/Dashboard/JoinQueue" class="action-card action-green">
+                    <div class="action-title">Join Queue</div>
+                    <div class="action-text">Register a new customer ticket.</div>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <a href="/Dashboard/CallNext" class="action-card action-orange">
+                    <div class="action-title">Call Next</div>
+                    <div class="action-text">Move the next ticket to called state.</div>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <a href="/Dashboard/ServeTicket" class="action-card action-dark">
+                    <div class="action-title">Serve Ticket</div>
+                    <div class="action-text">Mark a called ticket as served.</div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row g-4 mb-4">
     <div class="col-md-6 col-xl-3">
         <div class="trend-card trend-blue">
@@ -47,6 +93,7 @@
         </div>
     </div>
 </div>
+
 <div class="row g-4 mb-4">
     <div class="col-md-6 col-xxl-3">
         <div class="stat-card">
@@ -80,6 +127,7 @@
         </div>
     </div>
 </div>
+
 <div class="row g-4 mb-4">
     <div class="col-xl-8">
         <div class="panel-card">
@@ -125,33 +173,10 @@
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
-    <div class="row g-4 mb-4">
-        <div class="col-xl-7">
-            <div class="panel-card">
-                <div class="panel-header">
-                    <h4 class="panel-title">Tickets (Last 7 Days)</h4>
-                </div>
-                <div class="panel-body">
-                    <canvas id="ticketsChart"></canvas>
-                </div>
-            </div>
-        </div>
 
-        <div class="col-xl-5">
-            <div class="panel-card">
-                <div class="panel-header">
-                    <h4 class="panel-title">Top Queues</h4>
-                </div>
-                <div class="panel-body">
-                    <canvas id="queueChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
     <div class="col-xl-4">
         <div class="panel-card h-100">
             <div class="panel-header">
@@ -179,6 +204,37 @@
         </div>
     </div>
 </div>
+
+<div class="row g-4 mb-4">
+    <div class="col-xl-7">
+        <div class="panel-card">
+            <div class="panel-header">
+                <div>
+                    <h4 class="panel-title">Tickets (Last 7 Days)</h4>
+                    <p class="panel-subtitle">Daily created tickets overview</p>
+                </div>
+            </div>
+            <div class="panel-body">
+                <canvas id="ticketsChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-5">
+        <div class="panel-card">
+            <div class="panel-header">
+                <div>
+                    <h4 class="panel-title">Top Queues</h4>
+                    <p class="panel-subtitle">Most requested queues</p>
+                </div>
+            </div>
+            <div class="panel-body">
+                <canvas id="queueChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row g-4">
     <div class="col-xl-5">
         <div class="panel-card h-100">
@@ -229,6 +285,18 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="d-flex gap-2 mt-3">
+                                <a href="/Dashboard/JoinQueue?queueId=@queue.QueueId"
+                                   class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                    Join
+                                </a>
+
+                                <a href="/Dashboard/CallNext?queueId=@queue.QueueId"
+                                   class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                                    Call Next
+                                </a>
+                            </div>
                         </div>
                     }
                 }
@@ -262,6 +330,7 @@
                                     <th>Status</th>
                                     <th>Priority</th>
                                     <th>Est. Wait</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -282,6 +351,19 @@
                                             </span>
                                         </td>
                                         <td>@ticket.EstimatedWaitTimeMinutes min</td>
+                                        <td>
+                                            @if (ticket.Status == "Called")
+                                            {
+                                                <a href="/Dashboard/ServeTicket?ticketId=@ticket.TicketId"
+                                                   class="btn btn-sm btn-success rounded-pill px-3">
+                                                    Serve
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">-</span>
+                                            }
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
@@ -292,33 +374,92 @@
         </div>
     </div>
 </div>
+
 @section Scripts {
     <script>
-        const ticketsChart = new Chart(document.getElementById('ticketsChart'), {
-            type: 'line',
-            data: {
-                labels: @Html.Raw(Json.Serialize(Model.Last7DaysLabels)),
-                datasets: [{
-                    label: 'Tickets',
-                    data: @Html.Raw(Json.Serialize(Model.TicketsLast7Days)),
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37,99,235,0.1)',
-                    fill: true,
-                    tension: 0.4
-                }]
-            }
-        });
+        const ticketsLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Last7DaysLabels));
+        const ticketsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TicketsLast7Days));
+        const queueLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.QueueNames));
+        const queueData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TicketsPerQueue));
 
-        const queueChart = new Chart(document.getElementById('queueChart'), {
-            type: 'bar',
-            data: {
-                labels: @Html.Raw(Json.Serialize(Model.QueueNames)),
-                datasets: [{
-                    label: 'Tickets',
-                    data: @Html.Raw(Json.Serialize(Model.TicketsPerQueue)),
-                    backgroundColor: '#22c55e'
-                }]
-            }
-        });
+        const ticketsChartCanvas = document.getElementById('ticketsChart');
+        if (ticketsChartCanvas) {
+            new Chart(ticketsChartCanvas, {
+                type: 'line',
+                data: {
+                    labels: ticketsLabels,
+                    datasets: [{
+                        label: 'Tickets',
+                        data: ticketsData,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#2563eb',
+                        pointBorderColor: '#2563eb',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        const queueChartCanvas = document.getElementById('queueChart');
+        if (queueChartCanvas) {
+            new Chart(queueChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: queueLabels,
+                    datasets: [{
+                        label: 'Tickets',
+                        data: queueData,
+                        backgroundColor: [
+                            '#2563eb',
+                            '#22c55e',
+                            '#f97316',
+                            '#7c3aed',
+                            '#06b6d4'
+                        ],
+                        borderRadius: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        setTimeout(() => {
+            window.location.reload();
+        }, 15000);
     </script>
 }

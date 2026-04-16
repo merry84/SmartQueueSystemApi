@@ -13,6 +13,7 @@
         public string Status { get; set; } = null!;
 
         public string Priority { get; set; } = null!;
+        public int QueueId { get; set; }
 
         public DateTime CreatedOn { get; set; }
 

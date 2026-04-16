@@ -444,3 +444,45 @@ a {
     font-weight: 700;
     color: var(--text);
 }
+.action-card {
+    display: block;
+    border-radius: 18px;
+    padding: 18px;
+    color: white;
+    min-height: 130px;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+    .action-card:hover {
+        transform: translateY(-3px);
+        opacity: 0.96;
+        color: white;
+    }
+
+.action-blue {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+}
+
+.action-green {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+}
+
+.action-orange {
+    background: linear-gradient(135deg, #ea580c, #f97316);
+}
+
+.action-dark {
+    background: linear-gradient(135deg, #0f172a, #334155);
+}
+
+.action-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.action-text {
+    font-size: 0.92rem;
+    opacity: 0.92;
+}

@@ -1,0 +1,43 @@
+﻿@model SmartQueue.Api.ViewModels.Dashboard.Forms.CreateQueueFormViewModel
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Create Queue";
+}
+
+<div class="panel-card">
+    <div class="panel-header">
+        <div>
+            <h4 class="panel-title">Create Queue</h4>
+            <p class="panel-subtitle">Add a new queue to the system</p>
+        </div>
+    </div>
+    <div class="panel-body">
+        <form asp-action="CreateQueue" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="AverageServiceTimeMinutes" class="form-label"></label>
+                <input asp-for="AverageServiceTimeMinutes" class="form-control" />
+                <span asp-validation-for="AverageServiceTimeMinutes" class="text-danger"></span>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-dark rounded-pill px-4">Create</button>
+                <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">Back</a>
+            </div>
+        </form>
+    </div>
+</div>

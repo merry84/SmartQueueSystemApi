@@ -1,0 +1,35 @@
+﻿@model SmartQueue.Api.ViewModels.Dashboard.Forms.ServeTicketFormViewModel
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Serve Ticket";
+}
+
+<div class="panel-card">
+    <div class="panel-header">
+        <div>
+            <h4 class="panel-title">Serve Ticket</h4>
+            <p class="panel-subtitle">Mark a called ticket as completed</p>
+        </div>
+    </div>
+    <div class="panel-body">
+        <form asp-action="ServeTicket" method="post">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="TicketId" class="form-label"></label>
+                <select asp-for="TicketId" asp-items="Model.Tickets" class="form-select">
+                    <option value="">Select ticket</option>
+                </select>
+                <span asp-validation-for="TicketId" class="text-danger"></span>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-dark rounded-pill px-4">Serve</button>
+                <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">Back</a>
+            </div>
+        </form>
+    </div>
+</div>
