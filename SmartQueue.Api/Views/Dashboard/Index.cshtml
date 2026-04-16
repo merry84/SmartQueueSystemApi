@@ -1,0 +1,324 @@
+﻿@model SmartQueue.Api.ViewModels.Dashboard.DashboardIndexViewModel
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="hero-card mb-4">
+    <div>
+        <div class="hero-label">SMART QUEUE MONITORING</div>
+        <h1 class="hero-title">Real-time queue control panel</h1>
+        <p class="hero-text mb-0">
+            Track queue load, recent tickets and service performance from one place.
+        </p>
+    </div>
+</div>
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="trend-card trend-blue">
+            <div class="trend-label">Tickets Today</div>
+            <div class="trend-value">@Model.TicketsCreatedToday</div>
+            <div class="trend-meta">New queue entries today</div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="trend-card trend-green">
+            <div class="trend-label">Served Today</div>
+            <div class="trend-value">@Model.TicketsServedToday</div>
+            <div class="trend-meta">Completed successfully</div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="trend-card trend-orange">
+            <div class="trend-label">Called Today</div>
+            <div class="trend-value">@Model.TicketsCalledToday</div>
+            <div class="trend-meta">Moved to called state</div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="trend-card trend-dark">
+            <div class="trend-label">Service Rate</div>
+            <div class="trend-value">@Model.ServiceRatePercent.ToString("0.0")%</div>
+            <div class="trend-meta">Served vs created today</div>
+        </div>
+    </div>
+</div>
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xxl-3">
+        <div class="stat-card">
+            <div class="stat-label">Total Queues</div>
+            <div class="stat-value">@Model.TotalQueues</div>
+            <div class="stat-meta">Active: @Model.ActiveQueues</div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xxl-3">
+        <div class="stat-card">
+            <div class="stat-label">Total Tickets</div>
+            <div class="stat-value">@Model.TotalTickets</div>
+            <div class="stat-meta">All time activity</div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xxl-3">
+        <div class="stat-card">
+            <div class="stat-label">Waiting Tickets</div>
+            <div class="stat-value">@Model.WaitingTickets</div>
+            <div class="stat-meta">Called: @Model.CalledTickets</div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xxl-3">
+        <div class="stat-card">
+            <div class="stat-label">Average Wait Time</div>
+            <div class="stat-value">@Model.AverageWaitTimeMinutes.ToString("0.0") min</div>
+            <div class="stat-meta">Top queue: @Model.MostRequestedQueueName</div>
+        </div>
+    </div>
+</div>
+<div class="row g-4 mb-4">
+    <div class="col-xl-8">
+        <div class="panel-card">
+            <div class="panel-header">
+                <div>
+                    <h4 class="panel-title">Operational Progress</h4>
+                    <p class="panel-subtitle">Live snapshot of ticket distribution</p>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="progress-group">
+                    <div class="progress-row">
+                        <div class="progress-title">Waiting Tickets</div>
+                        <div class="progress-value">@Model.WaitingTickets</div>
+                    </div>
+                    <div class="progress modern-progress">
+                        <div class="progress-bar bg-warning"
+                             style="width:@(Model.TotalTickets > 0 ? (Model.WaitingTickets * 100.0 / Model.TotalTickets).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "0")%">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="progress-group">
+                    <div class="progress-row">
+                        <div class="progress-title">Called Tickets</div>
+                        <div class="progress-value">@Model.CalledTickets</div>
+                    </div>
+                    <div class="progress modern-progress">
+                        <div class="progress-bar bg-info"
+                             style="width:@(Model.TotalTickets > 0 ? (Model.CalledTickets * 100.0 / Model.TotalTickets).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "0")%">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="progress-group">
+                    <div class="progress-row">
+                        <div class="progress-title">Served Tickets</div>
+                        <div class="progress-value">@Model.ServedTickets</div>
+                    </div>
+                    <div class="progress modern-progress">
+                        <div class="progress-bar bg-success"
+                             style="width:@(Model.TotalTickets > 0 ? (Model.ServedTickets * 100.0 / Model.TotalTickets).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "0")%">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="row g-4 mb-4">
+        <div class="col-xl-7">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h4 class="panel-title">Tickets (Last 7 Days)</h4>
+                </div>
+                <div class="panel-body">
+                    <canvas id="ticketsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-5">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h4 class="panel-title">Top Queues</h4>
+                </div>
+                <div class="panel-body">
+                    <canvas id="queueChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="panel-card h-100">
+            <div class="panel-header">
+                <div>
+                    <h4 class="panel-title">Performance Insight</h4>
+                    <p class="panel-subtitle">Quick interpretation</p>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="insight-box mb-3">
+                    <div class="insight-label">Most Requested Queue</div>
+                    <div class="insight-value">@Model.MostRequestedQueueName</div>
+                </div>
+
+                <div class="insight-box mb-3">
+                    <div class="insight-label">Average Wait Time</div>
+                    <div class="insight-value">@Model.AverageWaitTimeMinutes.ToString("0.0") min</div>
+                </div>
+
+                <div class="insight-box">
+                    <div class="insight-label">Today Service Rate</div>
+                    <div class="insight-value">@Model.ServiceRatePercent.ToString("0.0")%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row g-4">
+    <div class="col-xl-5">
+        <div class="panel-card h-100">
+            <div class="panel-header">
+                <div>
+                    <h4 class="panel-title">Queue Load</h4>
+                    <p class="panel-subtitle">Current load by queue</p>
+                </div>
+            </div>
+
+            <div class="panel-body">
+                @if (!Model.TopQueues.Any())
+                {
+                    <div class="empty-state">No queues available yet.</div>
+                }
+                else
+                {
+                    @foreach (var queue in Model.TopQueues)
+                    {
+                        <div class="queue-item">
+                            <div class="queue-item-top">
+                                <div>
+                                    <h5 class="queue-name">@queue.QueueName</h5>
+                                    <span class="status-pill @(queue.IsActive ? "status-active" : "status-inactive")">
+                                        @(queue.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </div>
+                                <div class="avg-pill">@queue.AverageServiceTimeMinutes min avg</div>
+                            </div>
+
+                            <div class="row g-2 mt-1">
+                                <div class="col-4">
+                                    <div class="mini-stat">
+                                        <div class="mini-stat-value">@queue.WaitingTickets</div>
+                                        <div class="mini-stat-label">Waiting</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="mini-stat">
+                                        <div class="mini-stat-value">@queue.CalledTickets</div>
+                                        <div class="mini-stat-label">Called</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="mini-stat">
+                                        <div class="mini-stat-value">@queue.ServedTickets</div>
+                                        <div class="mini-stat-label">Served</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-7">
+        <div class="panel-card h-100">
+            <div class="panel-header">
+                <div>
+                    <h4 class="panel-title">Recent Tickets</h4>
+                    <p class="panel-subtitle">Latest customer activity</p>
+                </div>
+            </div>
+
+            <div class="panel-body">
+                @if (!Model.RecentTickets.Any())
+                {
+                    <div class="empty-state">No tickets available yet.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-modern align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Customer</th>
+                                    <th>Queue</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Est. Wait</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var ticket in Model.RecentTickets)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@ticket.Number</td>
+                                        <td>@ticket.CustomerName</td>
+                                        <td>@ticket.QueueName</td>
+                                        <td>
+                                            <span class="status-pill @(ticket.Status == "Waiting" ? "pill-waiting" : ticket.Status == "Called" ? "pill-called" : "pill-served")">
+                                                @ticket.Status
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="status-pill @(ticket.Priority == "VIP" ? "pill-vip" : "pill-normal")">
+                                                @ticket.Priority
+                                            </span>
+                                        </td>
+                                        <td>@ticket.EstimatedWaitTimeMinutes min</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        const ticketsChart = new Chart(document.getElementById('ticketsChart'), {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.Last7DaysLabels)),
+                datasets: [{
+                    label: 'Tickets',
+                    data: @Html.Raw(Json.Serialize(Model.TicketsLast7Days)),
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37,99,235,0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            }
+        });
+
+        const queueChart = new Chart(document.getElementById('queueChart'), {
+            type: 'bar',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.QueueNames)),
+                datasets: [{
+                    label: 'Tickets',
+                    data: @Html.Raw(Json.Serialize(Model.TicketsPerQueue)),
+                    backgroundColor: '#22c55e'
+                }]
+            }
+        });
+    </script>
+}

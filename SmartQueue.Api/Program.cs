@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<IQueueService, QueueService>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllersWithViews();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -131,6 +131,11 @@ app.UseGlobalExceptionMiddleware();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseStaticFiles();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Dashboard}/{action=Index}/{id?}");
 
 app.MapControllers();
 
