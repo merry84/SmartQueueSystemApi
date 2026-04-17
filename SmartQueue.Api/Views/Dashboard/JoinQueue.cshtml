@@ -12,38 +12,62 @@
             <p class="panel-subtitle">Create a new customer ticket</p>
         </div>
     </div>
+
     <div class="panel-body">
-        <form asp-action="JoinQueue" method="post">
+        <form action="/Dashboard/JoinQueue" method="post">
             @Html.AntiForgeryToken()
 
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
             <div class="mb-3">
-                <label asp-for="CustomerName" class="form-label"></label>
-                <input asp-for="CustomerName" class="form-control" />
+                <label class="form-label" for="CustomerName">Customer Name</label>
+                <input id="CustomerName"
+                       name="CustomerName"
+                       value="@Model.CustomerName"
+                       class="form-control"
+                       placeholder="Enter customer name" />
                 <span asp-validation-for="CustomerName" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
-                <label asp-for="QueueId" class="form-label"></label>
-                <select asp-for="QueueId" asp-items="Model.Queues" class="form-select">
+                <label class="form-label" for="QueueId">Queue</label>
+                <select id="QueueId" name="QueueId" class="form-select">
                     <option value="">Select queue</option>
+                    @foreach (var queue in Model.Queues)
+                    {
+                        if (queue.Value == Model.QueueId.ToString())
+                        {
+                            <option value="@queue.Value" selected>@queue.Text</option>
+                        }
+                        else
+                        {
+                            <option value="@queue.Value">@queue.Text</option>
+                        }
+                    }
                 </select>
                 <span asp-validation-for="QueueId" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
-                <label asp-for="Priority" class="form-label"></label>
-                <select asp-for="Priority" class="form-select">
-                    <option value="Normal">Normal</option>
-                    <option value="VIP">VIP</option>
+                <label class="form-label" for="Priority">Priority</label>
+                <select id="Priority" name="Priority" class="form-select">
+                    @if (Model.Priority == "VIP")
+                    {
+                        <option value="Normal">Normal</option>
+                        <option value="VIP" selected>VIP</option>
+                    }
+                    else
+                    {
+                        <option value="Normal" selected>Normal</option>
+                        <option value="VIP">VIP</option>
+                    }
                 </select>
                 <span asp-validation-for="Priority" class="text-danger"></span>
             </div>
 
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-dark rounded-pill px-4">Create Ticket</button>
-                <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">Back</a>
+                <a href="/Dashboard" class="btn btn-outline-secondary rounded-pill px-4">Back</a>
             </div>
         </form>
     </div>

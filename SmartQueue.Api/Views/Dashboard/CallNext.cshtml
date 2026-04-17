@@ -13,22 +13,34 @@
         </div>
     </div>
     <div class="panel-body">
-        <form asp-action="CallNext" method="post">
+        <form action="/Dashboard/CallNext" method="post">
             @Html.AntiForgeryToken()
 
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
             <div class="mb-3">
-                <label asp-for="QueueId" class="form-label"></label>
-                <select asp-for="QueueId" asp-items="Model.Queues" class="form-select">
+                <label class="form-label" for="QueueId">Queue</label>
+                <select id="QueueId" name="QueueId" class="form-select">
                     <option value="">Select queue</option>
+
+                    @foreach (var q in Model.Queues)
+                    {
+                        if (q.Value == Model.QueueId.ToString())
+                        {
+                            <option value="@q.Value" selected>@q.Text</option>
+                        }
+                        else
+                        {
+                            <option value="@q.Value">@q.Text</option>
+                        }
+                    }
                 </select>
                 <span asp-validation-for="QueueId" class="text-danger"></span>
             </div>
 
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-dark rounded-pill px-4">Call Next</button>
-                <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">Back</a>
+                <a href="/Dashboard" class="btn btn-outline-secondary rounded-pill px-4">Back</a>
             </div>
         </form>
     </div>

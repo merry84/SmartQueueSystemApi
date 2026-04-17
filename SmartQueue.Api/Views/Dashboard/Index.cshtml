@@ -31,7 +31,7 @@
         </div>
     </div>
     <div class="panel-body">
-        <div class="row g-3">
+        <div class="row g-3 justify-content-center">
             <div class="col-md-6 col-xl-3">
                 <a href="/Dashboard/CreateQueue" class="action-card action-blue">
                     <div class="action-title">Create Queue</div>
@@ -50,12 +50,7 @@
                     <div class="action-text">Move the next ticket to called state.</div>
                 </a>
             </div>
-            <div class="col-md-6 col-xl-3">
-                <a href="/Dashboard/ServeTicket" class="action-card action-dark">
-                    <div class="action-title">Serve Ticket</div>
-                    <div class="action-text">Mark a called ticket as served.</div>
-                </a>
-            </div>
+            
         </div>
     </div>
 </div>
@@ -354,10 +349,13 @@
                                         <td>
                                             @if (ticket.Status == "Called")
                                             {
-                                                <a href="/Dashboard/ServeTicket?ticketId=@ticket.TicketId"
-                                                   class="btn btn-sm btn-success rounded-pill px-3">
-                                                    Serve
-                                                </a>
+                                                <form action="/Dashboard/ServeTicket" method="post" style="display:inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="TicketId" value="@ticket.TicketId" />
+                                                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">
+                                                        Serve
+                                                    </button>
+                                                </form>
                                             }
                                             else
                                             {

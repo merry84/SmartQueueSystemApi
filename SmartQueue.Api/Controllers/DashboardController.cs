@@ -338,20 +338,12 @@ namespace SmartQueue.Api.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ServeTicket(ServeTicketFormViewModel model)
         {
-            model.Tickets = await GetCallableTicketSelectItemsAsync();
-
-            if (!ModelState.IsValid)
-            {
-                return View(model);
-            }
-
             var ticket = await dbContext.QueueTickets
                 .FirstOrDefaultAsync(t => t.Id == model.TicketId);
 
             if (ticket == null)
             {
-                ModelState.AddModelError(nameof(model.TicketId), "Selected ticket was not found.");
-                return View(model);
+                return NotFound();
             }
 
             ticket.Status = QueueStatus.Served;
