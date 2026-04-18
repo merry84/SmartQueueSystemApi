@@ -48,9 +48,53 @@
             </main>
         </div>
     </div>
+    <div class="toast-container-custom" id="toastContainer"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+
+    <script>
+        const globalSuccessMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["SuccessMessage"]));
+        const globalErrorMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ErrorMessage"]));
+
+        function showToast(title, message, cssClass) {
+            const toastContainer = document.getElementById('toastContainer');
+
+            if (!toastContainer || !message) {
+                return;
+            }
+
+            toastContainer.innerHTML = `
+                <div class="custom-toast ${cssClass}">
+                    <div class="custom-toast-title">${title}</div>
+                    <div class="custom-toast-message">${message}</div>
+                </div>
+            `;
+
+            const toastEl = toastContainer.querySelector('.custom-toast');
+
+            setTimeout(() => {
+                toastEl?.classList.add('show');
+            }, 100);
+
+            setTimeout(() => {
+                toastEl?.classList.remove('show');
+                setTimeout(() => {
+                    toastContainer.innerHTML = '';
+                }, 400);
+            }, 3500);
+        }
+
+        if (globalSuccessMessage) {
+            showToast("Success", globalSuccessMessage, "custom-toast-success");
+        }
+
+        if (globalErrorMessage) {
+            showToast("Error", globalErrorMessage, "custom-toast-error");
+        }
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

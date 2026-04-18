@@ -6,16 +6,20 @@ using SmartQueue.Api.Enums;
 using SmartQueue.Api.Models;
 using SmartQueue.Api.ViewModels.Dashboard;
 using SmartQueue.Api.ViewModels.Dashboard.Forms;
+using Microsoft.AspNetCore.SignalR;
+using SmartQueue.Api.Hubs;
 
 namespace SmartQueue.Api.Controllers
 {
     public class DashboardController : Controller
     {
         private readonly SmartQueueDbContext dbContext;
+        private readonly IHubContext<QueueHub> hubContext;
 
-        public DashboardController(SmartQueueDbContext dbContext)
+        public DashboardController(SmartQueueDbContext dbContext,IHubContext<QueueHub> hubContext)
         {
             this.dbContext = dbContext;
+            this.hubContext = hubContext;
         }
 
         [HttpGet]
@@ -175,6 +179,7 @@ namespace SmartQueue.Api.Controllers
 
             await dbContext.Queues.AddAsync(queue);
             await dbContext.SaveChangesAsync();
+            await hubContext.Clients.All.SendAsync("QueueUpdated");
 
             TempData["SuccessMessage"] = "Queue created successfully.";
             return RedirectToAction(nameof(Index));
@@ -255,6 +260,7 @@ namespace SmartQueue.Api.Controllers
 
             await dbContext.QueueTickets.AddAsync(ticket);
             await dbContext.SaveChangesAsync();
+            await hubContext.Clients.All.SendAsync("QueueUpdated");
 
             TempData["SuccessMessage"] = $"Ticket #{ticket.Number} created successfully.";
             return RedirectToAction(nameof(Index));
@@ -317,7 +323,7 @@ namespace SmartQueue.Api.Controllers
 
                 await dbContext.SaveChangesAsync();
             }
-
+            await hubContext.Clients.All.SendAsync("QueueUpdated");
             TempData["SuccessMessage"] = $"Ticket #{nextTicket.Number} was called.";
             return RedirectToAction(nameof(Index));
         }
@@ -350,6 +356,7 @@ namespace SmartQueue.Api.Controllers
             ticket.ServedOn = DateTime.UtcNow;
 
             await dbContext.SaveChangesAsync();
+            await hubContext.Clients.All.SendAsync("QueueUpdated");
 
             TempData["SuccessMessage"] = $"Ticket #{ticket.Number} marked as served.";
             return RedirectToAction(nameof(Index));

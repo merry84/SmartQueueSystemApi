@@ -104,12 +104,12 @@ namespace SmartQueue.Api.Controllers
 
             var claims = new List<Claim>
     {
-        new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-        new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
-        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-        new Claim(ClaimTypes.NameIdentifier, user.Id),
-        new Claim(ClaimTypes.Name, user.UserName ?? user.Email ?? string.Empty),
-        new Claim(ClaimTypes.Email, user.Email ?? string.Empty)
+                    new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+                    new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    new Claim(ClaimTypes.NameIdentifier, user.Id),
+                    new Claim(ClaimTypes.Name, user.UserName ?? user.Email ?? string.Empty),
+                    new Claim(ClaimTypes.Email, user.Email ?? string.Empty)
     };
 
             foreach (var role in userRoles)
@@ -152,6 +152,7 @@ namespace SmartQueue.Api.Controllers
                 ExpiresAtUtc = expiresAtUtc
             });
         }
+
         [HttpPost("assign-role")]
         public async Task<ActionResult<AuthResponseDto>> AssignRole(AssignRoleRequestDto model)
         {
