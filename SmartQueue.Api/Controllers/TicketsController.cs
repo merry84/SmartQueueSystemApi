@@ -1,10 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using SmartQueue.Api.Common;
-using SmartQueue.Api.Data;
 using SmartQueue.Api.DTOs;
-using SmartQueue.Api.Enums;
+using SmartQueue.Api.Services.Contracts;
 
 namespace SmartQueue.Api.Controllers
 {
@@ -12,43 +10,26 @@ namespace SmartQueue.Api.Controllers
     [Route("api/[controller]")]
     public class TicketsController : ControllerBase
     {
-        private readonly SmartQueueDbContext dbContext;
+        private readonly ITicketService ticketService;
 
-        public TicketsController(SmartQueueDbContext dbContext)
+        public TicketsController(ITicketService ticketService)
         {
-            this.dbContext = dbContext;
+            this.ticketService = ticketService;
         }
 
         [Authorize(Roles = "Operator")]
         [HttpPost("{id}/serve")]
         public async Task<ActionResult<NextTicketResponseDto>> ServeTicket(int id)
         {
-            var ticket = await dbContext.QueueTickets
-                .FirstOrDefaultAsync(t => t.Id == id);
+            var result = await ticketService.ServeAsync(id);
 
-            if (ticket == null)
+            if (result == null)
             {
                 return NotFound("Ticket not found");
             }
 
-            ticket.Status = QueueStatus.Served;
-            ticket.ServedOn = DateTime.UtcNow;
-
-            await dbContext.SaveChangesAsync();
-
-            var response = new NextTicketResponseDto
-            {
-                Id = ticket.Id,
-                CustomerName = ticket.CustomerName,
-                Number = ticket.Number,
-                Status = ticket.Status.ToString(),
-                Priority = ticket.Priority.ToString(),
-                CreatedOn = ticket.CreatedOn,
-                CalledOn = ticket.CalledOn
-            };
-
             return Ok(ApiResponse<NextTicketResponseDto>
-                .SuccessResponse(response, "Ticket served successfully"));
+                .SuccessResponse(result, "Ticket served successfully"));
         }
     }
 }

@@ -1,13 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SmartQueue.Api.Data;
 using SmartQueue.Api.Enums;
+using SmartQueue.Api.Hubs;
 using SmartQueue.Api.Models;
 using SmartQueue.Api.ViewModels.Dashboard;
 using SmartQueue.Api.ViewModels.Dashboard.Forms;
-using Microsoft.AspNetCore.SignalR;
-using SmartQueue.Api.Hubs;
+using System.Net.Sockets;
 
 namespace SmartQueue.Api.Controllers
 {
@@ -28,9 +29,9 @@ namespace SmartQueue.Api.Controllers
             var today = DateTime.UtcNow.Date;
 
             var waitTimes = await dbContext.QueueTickets
-                .Where(t => t.Status == QueueStatus.Served && t.ServedOn.HasValue)
-                .Select(t => EF.Functions.DateDiffMinute(t.CreatedOn, t.ServedOn!.Value))
-                .ToListAsync();
+                 .Where(t => t.Status == TicketStatus.Served && t.ServedAt.HasValue)
+                 .Select(t => EF.Functions.DateDiffMinute(t.JoinedAt, t.ServedAt.Value))
+                 .ToListAsync();
 
             var averageWaitTimeMinutes = waitTimes.Any()
                 ? waitTimes.Average()
@@ -48,9 +49,9 @@ namespace SmartQueue.Api.Controllers
                 {
                     QueueId = q.Id,
                     QueueName = q.Name,
-                    WaitingTickets = q.Tickets.Count(t => t.Status == QueueStatus.Waiting),
-                    CalledTickets = q.Tickets.Count(t => t.Status == QueueStatus.Called),
-                    ServedTickets = q.Tickets.Count(t => t.Status == QueueStatus.Served),
+                    WaitingTickets = q.Tickets.Count(t => t.Status == TicketStatus.Waiting),
+                    CalledTickets = q.Tickets.Count(t => t.Status == TicketStatus.Called),
+                    ServedTickets = q.Tickets.Count(t => t.Status == TicketStatus.Served),
                     AverageServiceTimeMinutes = q.AverageServiceTimeMinutes,
                     IsActive = q.IsActive
                 })
@@ -61,7 +62,7 @@ namespace SmartQueue.Api.Controllers
 
             var recentTickets = await dbContext.QueueTickets
                 .Include(t => t.Queue)
-                .OrderByDescending(t => t.CreatedOn)
+                .OrderByDescending(t => t.JoinedAt)
                 .Take(10)
                 .Select(t => new DashboardRecentTicketViewModel
                 {
@@ -72,26 +73,28 @@ namespace SmartQueue.Api.Controllers
                     QueueName = t.Queue.Name,
                     Status = t.Status.ToString(),
                     Priority = t.Priority.ToString(),
-                    CreatedOn = t.CreatedOn,
-                    EstimatedWaitTimeMinutes = t.EstimatedWaitTimeMinutes
+                    CreatedOn = t.JoinedAt,
+                    EstimatedWaitTimeMinutes = t.ServedAt.HasValue
+                        ? EF.Functions.DateDiffMinute(t.JoinedAt, t.ServedAt.Value)
+                        : 0
                 })
                 .ToListAsync();
 
             var totalQueues = await dbContext.Queues.CountAsync();
             var activeQueues = await dbContext.Queues.CountAsync(q => q.IsActive);
             var totalTickets = await dbContext.QueueTickets.CountAsync();
-            var waitingTickets = await dbContext.QueueTickets.CountAsync(t => t.Status == QueueStatus.Waiting);
-            var calledTickets = await dbContext.QueueTickets.CountAsync(t => t.Status == QueueStatus.Called);
-            var servedTickets = await dbContext.QueueTickets.CountAsync(t => t.Status == QueueStatus.Served);
+            var waitingTickets = await dbContext.QueueTickets.CountAsync(t => t.Status == TicketStatus.Waiting);
+            var calledTickets = await dbContext.QueueTickets.CountAsync(t => t.Status == TicketStatus.Called);
+            var servedTickets = await dbContext.QueueTickets.CountAsync(t => t.Status == TicketStatus.Served);
 
             var ticketsCreatedToday = await dbContext.QueueTickets
-                .CountAsync(t => t.CreatedOn >= today);
+                .CountAsync(t => t.JoinedAt >= today);
 
             var ticketsCalledToday = await dbContext.QueueTickets
-                .CountAsync(t => t.CalledOn.HasValue && t.CalledOn.Value >= today);
+                .CountAsync(t => t.CalledAt.HasValue && t.CalledAt.Value >= today);
 
             var ticketsServedToday = await dbContext.QueueTickets
-                .CountAsync(t => t.ServedOn.HasValue && t.ServedOn.Value >= today);
+                .CountAsync(t => t.ServedAt.HasValue && t.ServedAt.Value >= today);
 
             var serviceRatePercent = ticketsCreatedToday > 0
                 ? (double)ticketsServedToday / ticketsCreatedToday * 100
@@ -110,7 +113,7 @@ namespace SmartQueue.Api.Controllers
                 var nextDay = day.AddDays(1);
 
                 var count = await dbContext.QueueTickets
-                    .CountAsync(t => t.CreatedOn >= day && t.CreatedOn < nextDay);
+                    .CountAsync(t => t.JoinedAt >= day && t.JoinedAt < nextDay);
 
                 ticketsLast7Days.Add(count);
                 labels.Add(day.ToString("dd MMM"));
@@ -229,33 +232,17 @@ namespace SmartQueue.Api.Controllers
                 ? QueuePriority.VIP
                 : QueuePriority.Normal;
 
-            int peopleAhead;
-
-            if (priority == QueuePriority.VIP)
-            {
-                peopleAhead = await dbContext.QueueTickets
-                    .CountAsync(t => t.QueueId == model.QueueId
-                        && t.Status == QueueStatus.Waiting
-                        && t.Priority == QueuePriority.VIP);
-            }
-            else
-            {
-                peopleAhead = await dbContext.QueueTickets
-                    .CountAsync(t => t.QueueId == model.QueueId
-                        && t.Status == QueueStatus.Waiting);
-            }
-
-            var estimatedWait = peopleAhead * queue.AverageServiceTimeMinutes;
+            
+            
 
             var ticket = new QueueTicket
             {
                 CustomerName = model.CustomerName,
                 Number = nextNumber,
-                Status = QueueStatus.Waiting,
+                Status = TicketStatus.Waiting,
                 Priority = priority,
                 QueueId = model.QueueId,
-                CreatedOn = DateTime.UtcNow,
-                EstimatedWaitTimeMinutes = estimatedWait
+                JoinedAt = DateTime.UtcNow
             };
 
             await dbContext.QueueTickets.AddAsync(ticket);
@@ -290,7 +277,7 @@ namespace SmartQueue.Api.Controllers
             }
 
             var nextTicket = await dbContext.QueueTickets
-                .Where(t => t.QueueId == model.QueueId && t.Status == QueueStatus.Waiting)
+                .Where(t => t.QueueId == model.QueueId && t.Status == TicketStatus.Waiting)
                 .OrderBy(t => t.Priority == QueuePriority.VIP ? 0 : 1)
                 .ThenBy(t => t.Number)
                 .FirstOrDefaultAsync();
@@ -301,28 +288,14 @@ namespace SmartQueue.Api.Controllers
                 return View(model);
             }
 
-            nextTicket.Status = QueueStatus.Called;
-            nextTicket.CalledOn = DateTime.UtcNow;
+            nextTicket.Status = TicketStatus.Called;
+            nextTicket.CalledAt = DateTime.UtcNow;
 
             await dbContext.SaveChangesAsync();
 
             var queue = await dbContext.Queues.FirstOrDefaultAsync(q => q.Id == model.QueueId);
 
-            if (queue != null)
-            {
-                var waitingTickets = await dbContext.QueueTickets
-                    .Where(t => t.QueueId == model.QueueId && t.Status == QueueStatus.Waiting)
-                    .OrderBy(t => t.Priority == QueuePriority.VIP ? 0 : 1)
-                    .ThenBy(t => t.Number)
-                    .ToListAsync();
-
-                for (int i = 0; i < waitingTickets.Count; i++)
-                {
-                    waitingTickets[i].EstimatedWaitTimeMinutes = i * queue.AverageServiceTimeMinutes;
-                }
-
-                await dbContext.SaveChangesAsync();
-            }
+            await dbContext.SaveChangesAsync();
             await hubContext.Clients.All.SendAsync("QueueUpdated");
             TempData["SuccessMessage"] = $"Ticket #{nextTicket.Number} was called.";
             return RedirectToAction(nameof(Index));
@@ -352,8 +325,8 @@ namespace SmartQueue.Api.Controllers
                 return NotFound();
             }
 
-            ticket.Status = QueueStatus.Served;
-            ticket.ServedOn = DateTime.UtcNow;
+            ticket.Status = TicketStatus.Served;
+            ticket.ServedAt = DateTime.UtcNow;
 
             await dbContext.SaveChangesAsync();
             await hubContext.Clients.All.SendAsync("QueueUpdated");
@@ -379,7 +352,7 @@ namespace SmartQueue.Api.Controllers
         {
             return await dbContext.QueueTickets
                 .Include(t => t.Queue)
-                .Where(t => t.Status == QueueStatus.Called)
+                .Where(t => t.Status == TicketStatus.Called)
                 .OrderBy(t => t.Queue.Name)
                 .ThenBy(t => t.Number)
                 .Select(t => new SelectListItem
