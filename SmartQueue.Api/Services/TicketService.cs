@@ -4,16 +4,18 @@ using SmartQueue.Api.DTOs;
 using SmartQueue.Api.Enums;
 using SmartQueue.Api.Models;
 using SmartQueue.Api.Services.Contracts;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace SmartQueue.Api.Services
 {
     public class TicketService : ITicketService
     {
         private readonly SmartQueueDbContext dbContext;
-
-        public TicketService(SmartQueueDbContext dbContext)
+        private readonly IMemoryCache cache;
+        public TicketService(SmartQueueDbContext dbContext, IMemoryCache cache)
         {
             this.dbContext = dbContext;
+            this.cache = cache;
         }
 
         public async Task<QueueTicketResponseDto> JoinQueueAsync(int queueId, JoinQueueRequestDto model)
@@ -52,6 +54,7 @@ namespace SmartQueue.Api.Services
 
             await dbContext.QueueTickets.AddAsync(ticket);
             await dbContext.SaveChangesAsync();
+            cache.Remove("dashboard_data");
 
             return new QueueTicketResponseDto
             {
@@ -124,6 +127,7 @@ namespace SmartQueue.Api.Services
             nextTicket.CalledAt = DateTime.UtcNow;
 
             await dbContext.SaveChangesAsync();
+            cache.Remove("dashboard_data");
 
             return new NextTicketResponseDto
             {
@@ -136,7 +140,7 @@ namespace SmartQueue.Api.Services
                 CalledOn = nextTicket.CalledAt
             };
         }
-
+       
         public async Task<NextTicketResponseDto?> ServeAsync(int ticketId)
         {
             var ticket = await dbContext.QueueTickets
@@ -156,6 +160,7 @@ namespace SmartQueue.Api.Services
             ticket.ServedAt = DateTime.UtcNow;
 
             await dbContext.SaveChangesAsync();
+            cache.Remove("dashboard_data");
 
             return new NextTicketResponseDto
             {

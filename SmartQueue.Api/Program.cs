@@ -21,6 +21,7 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddMemoryCache();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo

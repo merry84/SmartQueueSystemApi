@@ -8,5 +8,6 @@ namespace SmartQueue.Api.Services.Contracts
         Task<IEnumerable<QueueTicketListItemDto>> GetTicketsAsync(int queueId);
         Task<NextTicketResponseDto?> CallNextAsync(int queueId);
         Task<NextTicketResponseDto?> ServeAsync(int ticketId);
+        
     }
 }

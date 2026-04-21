@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SmartQueue.Api.Data;
+using SmartQueue.Api.DTOs;
 using SmartQueue.Api.Enums;
 using SmartQueue.Api.Hubs;
 using SmartQueue.Api.Models;
@@ -18,14 +19,20 @@ namespace SmartQueue.Api.Controllers
        
         private readonly IHubContext<QueueHub> hubContext;
         private readonly IDashboardService dashboardService;
+        private readonly IQueueService queueService;
+        private readonly ITicketService ticketService;
         private readonly SmartQueueDbContext dbContext;
         public DashboardController(
-                SmartQueueDbContext dbContext,
-                IDashboardService dashboardService,
-                IHubContext<QueueHub> hubContext)
+            SmartQueueDbContext dbContext,
+            IDashboardService dashboardService,
+            IQueueService queueService,
+            ITicketService ticketService,
+            IHubContext<QueueHub> hubContext)
         {
             this.dbContext = dbContext;
             this.dashboardService = dashboardService;
+            this.queueService = queueService;
+            this.ticketService = ticketService;
             this.hubContext = hubContext;
         }
 
@@ -61,8 +68,12 @@ namespace SmartQueue.Api.Controllers
                 CreatedOn = DateTime.UtcNow
             };
 
-            await dbContext.Queues.AddAsync(queue);
-            await dbContext.SaveChangesAsync();
+            await queueService.CreateAsync(new CreateQueueRequestDto
+            {
+                Name = model.Name,
+                Description = model.Description,
+                AverageServiceTimeMinutes = model.AverageServiceTimeMinutes
+            });
             await hubContext.Clients.All.SendAsync("QueueUpdated");
 
             TempData["SuccessMessage"] = "Queue created successfully.";
@@ -85,52 +96,15 @@ namespace SmartQueue.Api.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> JoinQueue(JoinQueueFormViewModel model)
         {
-            model.Queues = await GetQueueSelectItemsAsync();
-
-            if (!ModelState.IsValid)
-            {
-                return View(model);
-            }
-
-            var queue = await dbContext.Queues
-                .FirstOrDefaultAsync(q => q.Id == model.QueueId && q.IsActive);
-
-            if (queue == null)
-            {
-                ModelState.AddModelError(nameof(model.QueueId), "Selected queue was not found.");
-                return View(model);
-            }
-
-            var lastNumber = await dbContext.QueueTickets
-                .Where(t => t.QueueId == model.QueueId)
-                .OrderByDescending(t => t.Number)
-                .Select(t => t.Number)
-                .FirstOrDefaultAsync();
-
-            var nextNumber = lastNumber + 1;
-
-            var priority = model.Priority?.ToUpper() == "VIP"
-                ? QueuePriority.VIP
-                : QueuePriority.Normal;
-
-            
-            
-
-            var ticket = new QueueTicket
+            await ticketService.JoinQueueAsync(model.QueueId, new JoinQueueRequestDto
             {
                 CustomerName = model.CustomerName,
-                Number = nextNumber,
-                Status = TicketStatus.Waiting,
-                Priority = priority,
-                QueueId = model.QueueId,
-                JoinedAt = DateTime.UtcNow
-            };
+                Priority = model.Priority
+            });
 
-            await dbContext.QueueTickets.AddAsync(ticket);
-            await dbContext.SaveChangesAsync();
             await hubContext.Clients.All.SendAsync("QueueUpdated");
 
-            TempData["SuccessMessage"] = $"Ticket #{ticket.Number} created successfully.";
+            TempData["SuccessMessage"] = "Ticket created successfully.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -150,35 +124,17 @@ namespace SmartQueue.Api.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CallNext(CallNextFormViewModel model)
         {
-            model.Queues = await GetQueueSelectItemsAsync();
+            var result = await ticketService.CallNextAsync(model.QueueId);
 
-            if (!ModelState.IsValid)
+            if (result == null)
             {
+                ModelState.AddModelError(string.Empty, "No waiting tickets found.");
                 return View(model);
             }
 
-            var nextTicket = await dbContext.QueueTickets
-                .Where(t => t.QueueId == model.QueueId && t.Status == TicketStatus.Waiting)
-                .OrderBy(t => t.Priority == QueuePriority.VIP ? 0 : 1)
-                .ThenBy(t => t.Number)
-                .FirstOrDefaultAsync();
-
-            if (nextTicket == null)
-            {
-                ModelState.AddModelError(string.Empty, "No waiting tickets found for this queue.");
-                return View(model);
-            }
-
-            nextTicket.Status = TicketStatus.Called;
-            nextTicket.CalledAt = DateTime.UtcNow;
-
-            await dbContext.SaveChangesAsync();
-
-            var queue = await dbContext.Queues.FirstOrDefaultAsync(q => q.Id == model.QueueId);
-
-            await dbContext.SaveChangesAsync();
             await hubContext.Clients.All.SendAsync("QueueUpdated");
-            TempData["SuccessMessage"] = $"Ticket #{nextTicket.Number} was called.";
+
+            TempData["SuccessMessage"] = $"Ticket #{result.Number} was called.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -198,21 +154,16 @@ namespace SmartQueue.Api.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ServeTicket(ServeTicketFormViewModel model)
         {
-            var ticket = await dbContext.QueueTickets
-                .FirstOrDefaultAsync(t => t.Id == model.TicketId);
+            var result = await ticketService.ServeAsync(model.TicketId);
 
-            if (ticket == null)
+            if (result == null)
             {
                 return NotFound();
             }
 
-            ticket.Status = TicketStatus.Served;
-            ticket.ServedAt = DateTime.UtcNow;
-
-            await dbContext.SaveChangesAsync();
             await hubContext.Clients.All.SendAsync("QueueUpdated");
 
-            TempData["SuccessMessage"] = $"Ticket #{ticket.Number} marked as served.";
+            TempData["SuccessMessage"] = $"Ticket #{result.Number} marked as served.";
             return RedirectToAction(nameof(Index));
         }
 
