@@ -1,4 +1,5 @@
 ﻿using SmartQueue.Api.DTOs;
+using SmartQueue.Api.ViewModels.Dashboard;
 
 namespace SmartQueue.Api.Services.Contracts
 {
@@ -6,5 +7,6 @@ namespace SmartQueue.Api.Services.Contracts
     {
         Task<QueueStatisticsDto> GetStatisticsAsync();
         Task<AdminSummaryDto> GetAdminSummaryAsync();
+        Task<DashboardIndexViewModel> GetDashboardDataAsync();
     }
 }

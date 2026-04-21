@@ -3,6 +3,7 @@ using SmartQueue.Api.Data;
 using SmartQueue.Api.DTOs;
 using SmartQueue.Api.Enums;
 using SmartQueue.Api.Services.Contracts;
+using SmartQueue.Api.ViewModels.Dashboard;
 
 
 namespace SmartQueue.Api.Services
@@ -149,6 +150,93 @@ namespace SmartQueue.Api.Services
                 WaitingTickets = waitingTickets,
                 AverageWaitTimeMinutes = averageWaitTimeMinutes,
                 QueueLoads = queueLoads,
+                RecentTickets = recentTickets
+            };
+        }
+        public async Task<DashboardIndexViewModel> GetDashboardDataAsync()
+        {
+            var today = DateTime.UtcNow.Date;
+
+            var waitTimes = await dbContext.QueueTickets
+                .Where(t => t.Status == TicketStatus.Served && t.ServedAt.HasValue)
+                .Select(t => EF.Functions.DateDiffMinute(t.JoinedAt, t.ServedAt!.Value))
+                .ToListAsync();
+
+            var averageWaitTimeMinutes = waitTimes.Any() ? waitTimes.Average() : 0;
+
+            var mostRequestedQueueName = await dbContext.QueueTickets
+                .Include(t => t.Queue)
+                .GroupBy(t => t.Queue.Name)
+                .OrderByDescending(g => g.Count())
+                .Select(g => g.Key)
+                .FirstOrDefaultAsync() ?? "N/A";
+
+            var topQueues = await dbContext.Queues
+                .Select(q => new DashboardQueueCardViewModel
+                {
+                    QueueId = q.Id,
+                    QueueName = q.Name,
+                    WaitingTickets = q.Tickets.Count(t => t.Status == TicketStatus.Waiting),
+                    CalledTickets = q.Tickets.Count(t => t.Status == TicketStatus.Called),
+                    ServedTickets = q.Tickets.Count(t => t.Status == TicketStatus.Served),
+                    AverageServiceTimeMinutes = q.AverageServiceTimeMinutes,
+                    IsActive = q.IsActive
+                })
+                .OrderByDescending(q => q.WaitingTickets)
+                .ThenBy(q => q.QueueName)
+                .Take(6)
+                .ToListAsync();
+
+            var recentTickets = await dbContext.QueueTickets
+                .Include(t => t.Queue)
+                .OrderByDescending(t => t.JoinedAt)
+                .Take(10)
+                .Select(t => new DashboardRecentTicketViewModel
+                {
+                    TicketId = t.Id,
+                    QueueId = t.QueueId,
+                    CustomerName = t.CustomerName,
+                    Number = t.Number,
+                    QueueName = t.Queue.Name,
+                    Status = t.Status.ToString(),
+                    Priority = t.Priority.ToString(),
+                    CreatedOn = t.JoinedAt,
+                    EstimatedWaitTimeMinutes = t.ServedAt.HasValue
+                        ? EF.Functions.DateDiffMinute(t.JoinedAt, t.ServedAt.Value)
+                        : 0
+                })
+                .ToListAsync();
+
+            var totalQueues = await dbContext.Queues.CountAsync();
+            var activeQueues = await dbContext.Queues.CountAsync(q => q.IsActive);
+            var totalTickets = await dbContext.QueueTickets.CountAsync();
+            var waitingTickets = await dbContext.QueueTickets.CountAsync(t => t.Status == TicketStatus.Waiting);
+            var calledTickets = await dbContext.QueueTickets.CountAsync(t => t.Status == TicketStatus.Called);
+            var servedTickets = await dbContext.QueueTickets.CountAsync(t => t.Status == TicketStatus.Served);
+
+            var ticketsCreatedToday = await dbContext.QueueTickets.CountAsync(t => t.JoinedAt >= today);
+            var ticketsCalledToday = await dbContext.QueueTickets.CountAsync(t => t.CalledAt.HasValue && t.CalledAt.Value >= today);
+            var ticketsServedToday = await dbContext.QueueTickets.CountAsync(t => t.ServedAt.HasValue && t.ServedAt.Value >= today);
+
+            var serviceRatePercent = ticketsCreatedToday > 0
+                ? (double)ticketsServedToday / ticketsCreatedToday * 100
+                : 0;
+
+            return new DashboardIndexViewModel
+            {
+                TotalQueues = totalQueues,
+                ActiveQueues = activeQueues,
+                TotalTickets = totalTickets,
+                WaitingTickets = waitingTickets,
+                CalledTickets = calledTickets,
+                ServedTickets = servedTickets,
+                AverageWaitTimeMinutes = averageWaitTimeMinutes,
+                MostRequestedQueueName = mostRequestedQueueName,
+                TicketsCreatedToday = ticketsCreatedToday,
+                TicketsCalledToday = ticketsCalledToday,
+                TicketsServedToday = ticketsServedToday,
+                ServiceRatePercent = serviceRatePercent,
+                TopQueues = topQueues,
                 RecentTickets = recentTickets
             };
         }
