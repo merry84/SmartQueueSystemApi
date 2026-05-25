@@ -143,6 +143,8 @@ app.UseStaticFiles();
 
 app.UseGlobalExceptionMiddleware();
 
+app.UseStatusCodePagesWithReExecute("/Error/{0}");
+
 app.UseAuthentication();
 app.UseAuthorization();
 

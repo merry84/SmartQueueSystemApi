@@ -1,0 +1,25 @@
+﻿@using SmartQueue.Api.Common
+
+@if (TempData[NotificationConstants.SuccessMessage] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm rounded-4 mb-4" role="alert">
+        @TempData[NotificationConstants.SuccessMessage]
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert">
+        </button>
+    </div>
+}
+
+@if (TempData[NotificationConstants.ErrorMessage] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm rounded-4 mb-4" role="alert">
+        @TempData[NotificationConstants.ErrorMessage]
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert">
+        </button>
+    </div>
+}

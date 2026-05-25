@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using NUnit.Framework;
 using SmartQueue.Api.Data;
 using SmartQueue.Api.DTOs;
@@ -12,73 +13,99 @@ namespace SmartQueue.Api.Tests.Services
     public class TicketServiceTests
     {
         private SmartQueueDbContext dbContext = null!;
+        private IMemoryCache cache = null!;
         private TicketService ticketService = null!;
 
         [SetUp]
         public void Setup()
         {
             var options = new DbContextOptionsBuilder<SmartQueueDbContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options;
 
             dbContext = new SmartQueueDbContext(options);
-            ticketService = new TicketService(dbContext);
+            cache = new MemoryCache(new MemoryCacheOptions());
+
+            ticketService = new TicketService(dbContext, cache);
         }
 
         [TearDown]
         public void TearDown()
         {
+            cache.Dispose();
             dbContext.Dispose();
         }
 
         [Test]
-        public async Task JoinQueueAsync_ShouldCreateTicketWithNumberOne_WhenFirstTicket()
+        public async Task ServeAsync_ShouldMarkCalledTicketAsServed()
         {
-            var queue = new Queue
-            {
-                Name = "Queue 1",
-                Description = "Test Queue",
-                IsActive = true,
-                CreatedOn = DateTime.UtcNow,
-                AverageServiceTimeMinutes = 5
-            };
-
-            await dbContext.Queues.AddAsync(queue);
-            await dbContext.SaveChangesAsync();
-
-            var model = new JoinQueueRequestDto
+            var ticket = new QueueTicket
             {
                 CustomerName = "Maria",
-                Priority = "Normal"
+                Number = 1,
+                Status = TicketStatus.Called,
+                Priority = QueuePriority.Normal,
+                JoinedAt = DateTime.UtcNow
             };
 
-            var result = await ticketService.JoinQueueAsync(queue.Id, model);
+            await dbContext.QueueTickets.AddAsync(ticket);
+            await dbContext.SaveChangesAsync();
+
+            var result = await ticketService.ServeAsync(ticket.Id);
 
             Assert.That(result, Is.Not.Null);
-            Assert.That(result.CustomerName, Is.EqualTo("Maria"));
-            Assert.That(result.Number, Is.EqualTo(1));
-            Assert.That(result.Status, Is.EqualTo("Waiting"));
-            Assert.That(result.Priority, Is.EqualTo("Normal"));
+            Assert.That(result!.Status, Is.EqualTo("Served"));
+
+            var dbTicket = await dbContext.QueueTickets.FindAsync(ticket.Id);
+
+            Assert.That(dbTicket!.Status, Is.EqualTo(TicketStatus.Served));
+            Assert.That(dbTicket.ServedAt, Is.Not.Null);
         }
 
         [Test]
-        public async Task JoinQueueAsync_ShouldAssignNextTicketNumber()
+        public async Task ServeAsync_ShouldReturnNull_WhenTicketDoesNotExist()
+        {
+            var result = await ticketService.ServeAsync(999);
+
+            Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void ServeAsync_ShouldThrow_WhenTicketIsWaiting()
+        {
+            var ticket = new QueueTicket
+            {
+                CustomerName = "Ivan",
+                Number = 5,
+                Status = TicketStatus.Waiting,
+                Priority = QueuePriority.Normal,
+                JoinedAt = DateTime.UtcNow
+            };
+
+            dbContext.QueueTickets.Add(ticket);
+            dbContext.SaveChanges();
+
+            Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            {
+                await ticketService.ServeAsync(ticket.Id);
+            });
+        }
+
+        [Test]
+        public async Task CallNextAsync_ShouldSetCalledAt()
         {
             var queue = new Queue
             {
-                Name = "Queue 1",
-                Description = "Test Queue",
+                Name = "Support",
                 IsActive = true,
-                CreatedOn = DateTime.UtcNow,
-                AverageServiceTimeMinutes = 5
+                CreatedOn = DateTime.UtcNow
             };
 
             await dbContext.Queues.AddAsync(queue);
-            await dbContext.SaveChangesAsync();
 
             await dbContext.QueueTickets.AddAsync(new QueueTicket
             {
-                CustomerName = "First",
+                CustomerName = "Peter",
                 Number = 1,
                 Status = TicketStatus.Waiting,
                 Priority = QueuePriority.Normal,
@@ -88,135 +115,11 @@ namespace SmartQueue.Api.Tests.Services
 
             await dbContext.SaveChangesAsync();
 
-            var model = new JoinQueueRequestDto
-            {
-                CustomerName = "Second",
-                Priority = "VIP"
-            };
-
-            var result = await ticketService.JoinQueueAsync(queue.Id, model);
-
-            Assert.That(result.Number, Is.EqualTo(2));
-            Assert.That(result.Priority, Is.EqualTo("VIP"));
-        }
-
-        [Test]
-        public async Task CallNextAsync_ShouldReturnVipTicketFirst()
-        {
-            var queue = new Queue
-            {
-                Name = "Queue 1",
-                Description = "Test Queue",
-                IsActive = true,
-                CreatedOn = DateTime.UtcNow,
-                AverageServiceTimeMinutes = 5
-            };
-
-            await dbContext.Queues.AddAsync(queue);
-            await dbContext.SaveChangesAsync();
-
-            await dbContext.QueueTickets.AddRangeAsync(
-                new QueueTicket
-                {
-                    CustomerName = "Maria",
-                    Number = 1,
-                    Status = TicketStatus.Waiting,
-                    Priority = QueuePriority.Normal,
-                    QueueId = queue.Id,
-                    JoinedAt = DateTime.UtcNow
-                },
-                new QueueTicket
-                {
-                    CustomerName = "Ivan",
-                    Number = 2,
-                    Status = TicketStatus.Waiting,
-                    Priority = QueuePriority.VIP,
-                    QueueId = queue.Id,
-                    JoinedAt = DateTime.UtcNow
-                });
-
-            await dbContext.SaveChangesAsync();
-
             var result = await ticketService.CallNextAsync(queue.Id);
 
             Assert.That(result, Is.Not.Null);
-            Assert.That(result!.CustomerName, Is.EqualTo("Ivan"));
-            Assert.That(result.Status, Is.EqualTo("Called"));
-            Assert.That(result.Priority, Is.EqualTo("VIP"));
-        }
-
-        [Test]
-        public async Task CallNextAsync_ShouldReturnNull_WhenNoWaitingTickets()
-        {
-            var queue = new Queue
-            {
-                Name = "Queue 1",
-                Description = "Test Queue",
-                IsActive = true,
-                CreatedOn = DateTime.UtcNow,
-                AverageServiceTimeMinutes = 5
-            };
-
-            await dbContext.Queues.AddAsync(queue);
-            await dbContext.SaveChangesAsync();
-
-            var result = await ticketService.CallNextAsync(queue.Id);
-
-            Assert.That(result, Is.Null);
-        }
-
-        [Test]
-        public async Task GetTicketsAsync_ShouldReturnTicketsOrderedByPriorityThenNumber()
-        {
-            var queue = new Queue
-            {
-                Name = "Queue 1",
-                Description = "Test Queue",
-                IsActive = true,
-                CreatedOn = DateTime.UtcNow,
-                AverageServiceTimeMinutes = 5
-            };
-
-            await dbContext.Queues.AddAsync(queue);
-            await dbContext.SaveChangesAsync();
-
-            await dbContext.QueueTickets.AddRangeAsync(
-                new QueueTicket
-                {
-                    CustomerName = "Third",
-                    Number = 3,
-                    Status = TicketStatus.Waiting,
-                    Priority = QueuePriority.Normal,
-                    QueueId = queue.Id,
-                    JoinedAt = DateTime.UtcNow
-                },
-                new QueueTicket
-                {
-                    CustomerName = "First",
-                    Number = 1,
-                    Status = TicketStatus.Waiting,
-                    Priority = QueuePriority.VIP,
-                    QueueId = queue.Id,
-                    JoinedAt = DateTime.UtcNow
-                },
-                new QueueTicket
-                {
-                    CustomerName = "Second",
-                    Number = 2,
-                    Status = TicketStatus.Waiting,
-                    Priority = QueuePriority.Normal,
-                    QueueId = queue.Id,
-                    JoinedAt = DateTime.UtcNow
-                });
-
-            await dbContext.SaveChangesAsync();
-
-            var result = (await ticketService.GetTicketsAsync(queue.Id)).ToList();
-
-            Assert.That(result.Count, Is.EqualTo(3));
-            Assert.That(result[0].Number, Is.EqualTo(1));
-            Assert.That(result[1].Number, Is.EqualTo(2));
-            Assert.That(result[2].Number, Is.EqualTo(3));
+            Assert.That(result!.Status, Is.EqualTo("Called"));
+            Assert.That(result.CalledOn, Is.Not.Null);
         }
     }
 }

@@ -48,6 +48,12 @@ namespace SmartQueue.Api.Controllers
             return RedirectToAction("Index", "Dashboard");
         }
 
+        [HttpGet]
+        public IActionResult AccessDenied()
+        {
+            return View();
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()

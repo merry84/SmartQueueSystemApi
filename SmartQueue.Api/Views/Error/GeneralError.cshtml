@@ -1,0 +1,16 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Something Went Wrong";
+}
+
+<div class="hero-card text-center fade-in-up">
+    <div class="hero-label">ERROR</div>
+    <h1 class="hero-title">Something went wrong</h1>
+    <p class="hero-text">
+        An unexpected error occurred. Please try again later.
+    </p>
+
+    <a asp-controller="Dashboard" asp-action="Index" class="btn btn-primary rounded-pill px-4 mt-3">
+        Back to Dashboard
+    </a>
+</div>

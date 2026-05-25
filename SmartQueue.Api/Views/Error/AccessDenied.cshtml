@@ -1,0 +1,16 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Access Denied";
+}
+
+<div class="hero-card text-center fade-in-up">
+    <div class="hero-label">403</div>
+    <h1 class="hero-title">Access denied</h1>
+    <p class="hero-text">
+        You do not have permission to access this page.
+    </p>
+
+    <a asp-controller="Dashboard" asp-action="Index" class="btn btn-primary rounded-pill px-4 mt-3">
+        Back to Dashboard
+    </a>
+</div>

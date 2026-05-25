@@ -10,7 +10,6 @@ using SmartQueue.Api.Enums;
 using SmartQueue.Api.Hubs;
 using SmartQueue.Api.Models;
 using SmartQueue.Api.Services.Contracts;
-using SmartQueue.Api.ViewModels.Dashboard;
 using SmartQueue.Api.ViewModels.Dashboard.Forms;
 using System.Net.Sockets;
 
@@ -47,6 +46,7 @@ namespace SmartQueue.Api.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = RoleNames.Admin)]
         public IActionResult CreateQueue()
         {
             return View(new CreateQueueFormViewModel());
@@ -79,7 +79,7 @@ namespace SmartQueue.Api.Controllers
             });
             await hubContext.Clients.All.SendAsync("QueueUpdated");
 
-            TempData["SuccessMessage"] = "Queue created successfully.";
+            TempData[NotificationConstants.SuccessMessage] = "Queue created successfully.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -107,7 +107,7 @@ namespace SmartQueue.Api.Controllers
 
             await hubContext.Clients.All.SendAsync("QueueUpdated");
 
-            TempData["SuccessMessage"] = "Ticket created successfully.";
+            TempData[NotificationConstants.SuccessMessage] = "Ticket created successfully.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -139,7 +139,7 @@ namespace SmartQueue.Api.Controllers
 
             await hubContext.Clients.All.SendAsync("QueueUpdated");
 
-            TempData["SuccessMessage"] = $"Ticket #{result.Number} was called.";
+            TempData[NotificationConstants.SuccessMessage] = $"Ticket #{result.Number} was called.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -169,7 +169,7 @@ namespace SmartQueue.Api.Controllers
 
             await hubContext.Clients.All.SendAsync("QueueUpdated");
 
-            TempData["SuccessMessage"] = $"Ticket #{result.Number} marked as served.";
+            TempData[NotificationConstants.SuccessMessage] = $"Ticket #{result.Number} marked as served.";
             return RedirectToAction(nameof(Index));
         }
 

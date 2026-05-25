@@ -618,3 +618,20 @@ a {
     .custom-toast-error .custom-toast-title {
         color: #b91c1c;
     }
+.loading-button {
+    opacity: 0.85;
+    pointer-events: none;
+    transition: all 0.2s ease;
+}
+
+.form-loading {
+    position: relative;
+}
+
+    .form-loading::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        backdrop-filter: blur(1px);
+        pointer-events: none;
+    }
