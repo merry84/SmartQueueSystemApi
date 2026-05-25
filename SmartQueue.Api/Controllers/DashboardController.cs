@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using SmartQueue.Api.Common;
 using SmartQueue.Api.Data;
 using SmartQueue.Api.DTOs;
 using SmartQueue.Api.Enums;
@@ -50,6 +52,7 @@ namespace SmartQueue.Api.Controllers
             return View(new CreateQueueFormViewModel());
         }
 
+        [Authorize(Roles = RoleNames.Admin)]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateQueue(CreateQueueFormViewModel model)
@@ -108,6 +111,7 @@ namespace SmartQueue.Api.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.Operator}")]
         [HttpGet]
         public async Task<IActionResult> CallNext(int? queueId)
         {
@@ -120,6 +124,7 @@ namespace SmartQueue.Api.Controllers
             return View(model);
         }
 
+        [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.Operator}")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CallNext(CallNextFormViewModel model)
@@ -138,6 +143,7 @@ namespace SmartQueue.Api.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.Operator}")]
         [HttpGet]
         public async Task<IActionResult> ServeTicket(int? ticketId)
         {

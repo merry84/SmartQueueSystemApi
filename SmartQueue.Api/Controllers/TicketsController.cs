@@ -17,7 +17,7 @@ namespace SmartQueue.Api.Controllers
             this.ticketService = ticketService;
         }
 
-        [Authorize(Roles = "Operator")]
+        [Authorize(Roles = RoleNames.Operator)]
         [HttpPost("{id}/serve")]
         public async Task<ActionResult<NextTicketResponseDto>> ServeTicket(int id)
         {

@@ -24,24 +24,36 @@
     </div>
     <div class="panel-body">
         <div class="row g-3 justify-content-center">
-            <div class="col-md-6 col-xl-3">
-                <a href="/Dashboard/CreateQueue" class="action-card action-blue">
-                    <div class="action-title">Create Queue</div>
-                    <div class="action-text">Add a new queue with service time.</div>
-                </a>
-            </div>
-            <div class="col-md-6 col-xl-3">
-                <a href="/Dashboard/JoinQueue" class="action-card action-green">
-                    <div class="action-title">Join Queue</div>
-                    <div class="action-text">Register a new customer ticket.</div>
-                </a>
-            </div>
-            <div class="col-md-6 col-xl-3">
-                <a href="/Dashboard/CallNext" class="action-card action-orange">
-                    <div class="action-title">Call Next</div>
-                    <div class="action-text">Move the next ticket to called state.</div>
-                </a>
-            </div>
+            @if (User.IsInRole("Admin"))
+            {
+                <div class="col-md-6 col-xl-3">
+                    <a href="/Dashboard/CreateQueue" class="action-card action-blue">
+                        <div class="action-title">Create Queue</div>
+                        <div class="action-text">Add a new queue with service time.</div>
+                    </a>
+                </div>
+            }
+
+            @if (User.Identity?.IsAuthenticated != true || User.IsInRole("Admin") || User.IsInRole("Operator"))
+            {
+                <div class="col-md-6 col-xl-3">
+                    <a href="/Dashboard/JoinQueue" class="action-card action-green">
+                        <div class="action-title">Join Queue</div>
+                        <div class="action-text">Register a new customer ticket.</div>
+                    </a>
+                </div>
+            }
+
+            @if (User.Identity?.IsAuthenticated == true &&
+                        (User.IsInRole("Admin") || User.IsInRole("Operator")))
+            {
+                <div class="col-md-6 col-xl-3">
+                    <a href="/Dashboard/CallNext" class="action-card action-orange">
+                        <div class="action-title">Call Next</div>
+                        <div class="action-text">Move the next ticket to called state.</div>
+                    </a>
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -273,15 +285,22 @@
                             </div>
 
                             <div class="d-flex gap-2 mt-3">
-                                <a href="/Dashboard/JoinQueue?queueId=@queue.QueueId"
-                                   class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                                    Join
-                                </a>
+                                @if (User.Identity?.IsAuthenticated != true || User.IsInRole("Admin") || User.IsInRole("Operator"))
+                                {
+                                    <a href="/Dashboard/JoinQueue?queueId=@queue.QueueId"
+                                       class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                        Join
+                                    </a>
+                                }
 
-                                <a href="/Dashboard/CallNext?queueId=@queue.QueueId"
-                                   class="btn btn-sm btn-outline-dark rounded-pill px-3">
-                                    Call Next
-                                </a>
+                                @if (User.Identity?.IsAuthenticated == true &&
+                                                        (User.IsInRole("Admin") || User.IsInRole("Operator")))
+                                {
+                                    <a href="/Dashboard/CallNext?queueId=@queue.QueueId"
+                                       class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                                        Call Next
+                                    </a>
+                                }
                             </div>
                         </div>
                     }
@@ -338,7 +357,9 @@
                                         </td>
                                         <td>@ticket.EstimatedWaitTimeMinutes min</td>
                                         <td>
-                                            @if (ticket.Status == "Called")
+                                            @if (ticket.Status == "Called" &&
+                                                                                User.Identity?.IsAuthenticated == true &&
+                                                                                (User.IsInRole("Admin") || User.IsInRole("Operator")))
                                             {
                                                 <form action="/Dashboard/ServeTicket" method="post" style="display:inline;">
                                                     @Html.AntiForgeryToken()

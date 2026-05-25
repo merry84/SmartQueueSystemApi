@@ -48,7 +48,7 @@ namespace SmartQueue.Api.Controllers
                 .SuccessResponse(queue, "Queue retrieved successfully"));
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = RoleNames.Admin)]
         [HttpPost]
         public async Task<ActionResult<QueueResponseDto>> Create(CreateQueueRequestDto model)
         {
@@ -68,7 +68,7 @@ namespace SmartQueue.Api.Controllers
                 .SuccessResponse(result, "Ticket created successfully"));
         }
 
-        [Authorize(Roles = "Operator")]
+        [Authorize(Roles = RoleNames.Operator)]
         [HttpPost("{id}/next")]
         public async Task<ActionResult<NextTicketResponseDto>> CallNext(int id)
         {
@@ -83,6 +83,8 @@ namespace SmartQueue.Api.Controllers
                 .SuccessResponse(result, "Next ticket called"));
         }
 
+        
+        [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.Operator}")]
         [HttpGet("{id}/tickets")]
         public async Task<ActionResult<IEnumerable<QueueTicketListItemDto>>> GetTickets(int id)
         {
@@ -92,6 +94,7 @@ namespace SmartQueue.Api.Controllers
                 .SuccessResponse(result, "Tickets retrieved successfully"));
         }
 
+        [Authorize(Roles = RoleNames.Admin)]
         [HttpGet("statistics")]
         public async Task<ActionResult<QueueStatisticsDto>> GetStatistics()
         {
@@ -101,7 +104,7 @@ namespace SmartQueue.Api.Controllers
                 .SuccessResponse(result, "Statistics retrieved successfully"));
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = RoleNames.Admin)]
         [HttpGet("admin-summary")]
         public async Task<ActionResult<AdminSummaryDto>> GetAdminSummary()
         {

@@ -22,6 +22,76 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMemoryCache();
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("DefaultConnection is missing.");
+
+builder.Services.AddDbContext<SmartQueueDbContext>(options =>
+    options.UseSqlServer(connectionString));
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+    .AddEntityFrameworkStores<SmartQueueDbContext>()
+    .AddDefaultTokenProviders();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.AccessDeniedPath = "/Account/AccessDenied";
+});
+
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(x => x.Value?.Errors.Count > 0)
+            .SelectMany(x => x.Value!.Errors)
+            .Select(x => x.ErrorMessage)
+            .ToList();
+
+        var response = new
+        {
+            success = false,
+            message = "Validation failed",
+            errors
+        };
+
+        return new BadRequestObjectResult(response);
+    };
+});
+
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException("JWT Key is missing.");
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException("JWT Issuer is missing.");
+
+var jwtAudience = builder.Configuration["Jwt:Audience"]
+    ?? throw new InvalidOperationException("JWT Audience is missing.");
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
+})
+.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
@@ -56,69 +126,6 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("DefaultConnection is missing.");
-
-builder.Services.AddDbContext<SmartQueueDbContext>(options =>
-    options.UseSqlServer(connectionString));
-
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<SmartQueueDbContext>()
-    .AddDefaultTokenProviders();
-
-builder.Services.Configure<ApiBehaviorOptions>(options =>
-{
-    options.InvalidModelStateResponseFactory = context =>
-    {
-        var errors = context.ModelState
-            .Where(x => x.Value?.Errors.Count > 0)
-            .SelectMany(x => x.Value!.Errors)
-            .Select(x => x.ErrorMessage)
-            .ToList();
-
-        var response = new
-        {
-            success = false,
-            message = "Validation failed",
-            errors = errors
-        };
-
-        return new BadRequestObjectResult(response);
-    };
-});
-
-var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException("JWT Key is missing.");
-
-var jwtIssuer = builder.Configuration["Jwt:Issuer"]
-    ?? throw new InvalidOperationException("JWT Issuer is missing.");
-
-var jwtAudience = builder.Configuration["Jwt:Audience"]
-    ?? throw new InvalidOperationException("JWT Audience is missing.");
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtIssuer,
-        ValidAudience = jwtAudience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-        ClockSkew = TimeSpan.Zero
-    };
-});
-
-builder.Services.AddAuthorization();
-
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
@@ -126,16 +133,18 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 if (!app.Environment.IsEnvironment("Docker"))
 {
     app.UseHttpsRedirection();
 }
-;
+
+app.UseStaticFiles();
+
 app.UseGlobalExceptionMiddleware();
 
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseStaticFiles();
 
 app.MapControllerRoute(
     name: "default",
@@ -143,13 +152,13 @@ app.MapControllerRoute(
 
 app.MapHub<SmartQueue.Api.Hubs.QueueHub>("/queueHub");
 
-
 app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<SmartQueueDbContext>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
     var retries = 5;
 
@@ -158,17 +167,26 @@ using (var scope = app.Services.CreateScope())
         try
         {
             dbContext.Database.Migrate();
+
             await RoleSeeder.SeedRolesAsync(roleManager);
+            await UserSeeder.SeedUsersAsync(userManager);
+
             break;
         }
-        catch
+        catch (Exception ex)
         {
             retries--;
-            Console.WriteLine("Waiting for database...");
+
+            Console.WriteLine($"Waiting for database or seed failed: {ex.Message}");
+
+            if (retries == 0)
+            {
+                throw;
+            }
+
             await Task.Delay(5000);
         }
     }
 }
-
 
 app.Run();
