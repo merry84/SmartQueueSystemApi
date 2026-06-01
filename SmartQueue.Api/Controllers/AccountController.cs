@@ -8,10 +8,12 @@ namespace SmartQueue.Api.Controllers
     public class AccountController : Controller
     {
         private readonly SignInManager<ApplicationUser> signInManager;
+        private readonly UserManager<ApplicationUser> userManager;
 
-        public AccountController(SignInManager<ApplicationUser> signInManager)
+        public AccountController(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager)
         {
             this.signInManager = signInManager;
+            this.userManager = userManager;
         }
 
         [HttpGet]
@@ -53,7 +55,46 @@ namespace SmartQueue.Api.Controllers
         {
             return View();
         }
+        [HttpGet]
+        public IActionResult Register()
+        {
+            return View();
+        }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(RegisterRequestDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName = model.Email,
+                Email = model.Email,
+                EmailConfirmed = true
+            };
+
+            var result = await userManager.CreateAsync(user, model.Password);
+
+            if (!result.Succeeded)
+            {
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+
+                return View(model);
+            }
+
+            await userManager.AddToRoleAsync(user, "User");
+
+            await signInManager.SignInAsync(user, isPersistent: false);
+
+            return RedirectToAction("Index", "Dashboard");
+        }
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()

@@ -27,5 +27,8 @@ namespace SmartQueue.Api.Models
         public int QueueId { get; set; }
 
         public Queue Queue { get; set; } = null!;
+        public string? UserId { get; set; }
+
+        public ApplicationUser? User { get; set; }
     }
 }

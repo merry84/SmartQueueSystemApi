@@ -290,9 +290,14 @@ namespace SmartQueue.Api.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("QueueId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("QueueTickets");
                 });
@@ -356,7 +361,18 @@ namespace SmartQueue.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SmartQueue.Api.Models.ApplicationUser", "User")
+                        .WithMany("QueueTickets")
+                        .HasForeignKey("UserId");
+
                     b.Navigation("Queue");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartQueue.Api.Models.ApplicationUser", b =>
+                {
+                    b.Navigation("QueueTickets");
                 });
 
             modelBuilder.Entity("SmartQueue.Api.Models.Queue", b =>

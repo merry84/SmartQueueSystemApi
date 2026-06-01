@@ -6,7 +6,7 @@ namespace SmartQueue.Api.Data.Seed
     {
         public static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)
         {
-            string[] roles = { "Admin", "Operator" };
+            string[] roles = { "Admin", "Operator", "User" };
 
             foreach (var role in roles)
             {
