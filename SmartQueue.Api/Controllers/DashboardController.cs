@@ -12,6 +12,7 @@ using SmartQueue.Api.Models;
 using SmartQueue.Api.Services.Contracts;
 using SmartQueue.Api.ViewModels.Dashboard.Forms;
 using System.Net.Sockets;
+using System.Security.Claims;
 
 namespace SmartQueue.Api.Controllers
 {
@@ -99,11 +100,22 @@ namespace SmartQueue.Api.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> JoinQueue(JoinQueueFormViewModel model)
         {
+            model.Queues = await GetQueueSelectItemsAsync();
+
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var userId = User.Identity?.IsAuthenticated == true
+                ? User.FindFirstValue(ClaimTypes.NameIdentifier)
+                : null;
+
             await ticketService.JoinQueueAsync(model.QueueId, new JoinQueueRequestDto
             {
                 CustomerName = model.CustomerName,
                 Priority = model.Priority
-            });
+            }, userId);
 
             await hubContext.Clients.All.SendAsync("QueueUpdated");
 

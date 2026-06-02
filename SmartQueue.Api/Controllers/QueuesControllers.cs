@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartQueue.Api.Common;
 using SmartQueue.Api.DTOs;
 using SmartQueue.Api.Services.Contracts;
+using System.Security.Claims;
 
 namespace SmartQueue.Api.Controllers
 {
@@ -62,10 +63,15 @@ namespace SmartQueue.Api.Controllers
         [HttpPost("{id}/join")]
         public async Task<ActionResult<QueueTicketResponseDto>> JoinQueue(int id, JoinQueueRequestDto model)
         {
-            var result = await ticketService.JoinQueueAsync(id, model);
+            var userId = User.Identity?.IsAuthenticated == true
+     ? User.FindFirstValue(ClaimTypes.NameIdentifier)
+     : null;
+
+            var result = await ticketService.JoinQueueAsync(id, model, userId);
 
             return Ok(ApiResponse<QueueTicketResponseDto>
                 .SuccessResponse(result, "Ticket created successfully"));
+            
         }
 
         [Authorize(Roles = RoleNames.Operator)]

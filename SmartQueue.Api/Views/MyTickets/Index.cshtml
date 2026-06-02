@@ -1,0 +1,118 @@
+﻿@model IEnumerable<SmartQueue.Api.ViewModels.Tickets.MyTicketViewModel>
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "My Tickets";
+}
+
+<div class="hero-card mb-4 fade-in-up">
+    <div>
+        <div class="hero-label">MY QUEUE STATUS</div>
+        <h1 class="hero-title">My Tickets</h1>
+        <p class="hero-text mb-0">
+            Track your queue numbers, status and estimated waiting time.
+        </p>
+    </div>
+</div>
+
+<div class="panel-card fade-in-up delay-1">
+    <div class="panel-header">
+        <div>
+            <h4 class="panel-title">My active and recent tickets</h4>
+            <p class="panel-subtitle">Only tickets created by your account are shown here.</p>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        @if (!Model.Any())
+        {
+            <div class="empty-state">
+                You do not have any tickets yet.
+            </div>
+
+            <a href="/Dashboard/JoinQueue" class="btn btn-primary rounded-pill px-4 mt-3">
+                Join a Queue
+            </a>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-modern align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Queue</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>People Ahead</th>
+                            <th>Est. Wait</th>
+                            <th>Message</th>
+                            <th>Joined</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ticket in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@ticket.Number</td>
+                                <td>@ticket.QueueName</td>
+                                <td>@ticket.CustomerName</td>
+                                <td>
+                                    <span class="status-pill @(ticket.Status == "Waiting" ? "pill-waiting" : ticket.Status == "Called" ? "pill-called" : "pill-served")">
+                                        @ticket.Status
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="status-pill @(ticket.Priority == "VIP" ? "pill-vip" : "pill-normal")">
+                                        @ticket.Priority
+                                    </span>
+                                </td>
+                                <td>@ticket.PeopleAhead</td>
+                                <td>@ticket.EstimatedWaitTimeMinutes min</td>
+                                <td>
+                                    @if (ticket.Status == "Waiting")
+                                    {
+                                        <span class="text-muted">
+                                            @ticket.PeopleAhead people ahead of you
+                                        </span>
+                                    }
+                                    else if (ticket.Status == "Called")
+                                    {
+                                        <span class="fw-semibold text-warning">
+                                            It is your turn
+                                        </span>
+                                    }
+                                    else if (ticket.Status == "Served")
+                                    {
+                                        <span class="text-success">
+                                            Completed
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>@ticket.JoinedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+@section Scripts {
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/queueHub")
+            .build();
+
+        connection.on("QueueUpdated", () => {
+            window.location.reload();
+        });
+
+        connection.start().catch(err => console.error(err.toString()));
+    </script>
+}

@@ -6,6 +6,7 @@ using SmartQueue.Api.Models;
 using SmartQueue.Api.Services.Contracts;
 using Microsoft.Extensions.Caching.Memory;
 
+
 namespace SmartQueue.Api.Services
 {
     public class TicketService : ITicketService
@@ -18,7 +19,7 @@ namespace SmartQueue.Api.Services
             this.cache = cache;
         }
 
-        public async Task<QueueTicketResponseDto> JoinQueueAsync(int queueId, JoinQueueRequestDto model)
+        public async Task<QueueTicketResponseDto> JoinQueueAsync(int queueId, JoinQueueRequestDto model, string? userId = null)
         {
             var queue = await dbContext.Queues
                 .FirstOrDefaultAsync(q => q.Id == queueId && q.IsActive);
@@ -49,7 +50,8 @@ namespace SmartQueue.Api.Services
                 Status = TicketStatus.Waiting,
                 Priority = priority,
                 QueueId = queueId,
-                JoinedAt = DateTime.UtcNow
+                JoinedAt = DateTime.UtcNow,
+                UserId = userId
             };
 
             await dbContext.QueueTickets.AddAsync(ticket);
